@@ -1,34 +1,56 @@
 import React, { useEffect, useState } from 'react'
 import { me } from '../services/authService'
+import {
+  User, Mail, Hash, Calendar, ShieldCheck, KeyRound,
+  GraduationCap, Users, Wrench, Baby
+} from 'lucide-react'
 
 const roleConfig = {
-  admin:       { icon:'🔑', bg:'role-admin',       label:'Administrator', color:'var(--brand-primary)' },
-  teacher:     { icon:'👩‍🏫', bg:'role-teacher',     label:'Teacher',       color:'#be185d' },
-  student:     { icon:'🧑‍🎓', bg:'role-student',     label:'Student',       color:'#0284c7' },
-  parent:      { icon:'👨‍👩‍👧', bg:'role-parent',      label:'Parent',        color:'#059669' },
-  maintenance: { icon:'🔧', bg:'role-maintenance', label:'Maintenance',   color:'#374151' },
+  admin:       { icon: ShieldCheck,   bg: 'role-admin',       label: 'Administrator', color: '#5b21b6' },
+  teacher:     { icon: Users,         bg: 'role-teacher',     label: 'Teacher',       color: '#be185d' },
+  student:     { icon: GraduationCap, bg: 'role-student',     label: 'Student',       color: '#0369a1' },
+  parent:      { icon: Baby,          bg: 'role-parent',      label: 'Parent',        color: '#059669' },
+  maintenance: { icon: Wrench,        bg: 'role-maintenance', label: 'Maintenance',   color: '#374151' },
 }
 
-export default function Profile(){
-  const [user, setUser] = useState(null)
+function DetailRow({ icon: Icon, label, value, mono = false }) {
+  return (
+    <div className="d-flex align-items-start gap-3 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+        <Icon size={14} color="var(--text-muted)" />
+      </div>
+      <div>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 2 }}>
+          {label}
+        </div>
+        {mono
+          ? <code style={{ background: 'var(--surface-2)', padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: '0.82rem', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>{value}</code>
+          : <div style={{ fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{value || '—'}</div>
+        }
+      </div>
+    </div>
+  )
+}
+
+export default function Profile() {
+  const [user, setUser]     = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     me().then(r => setUser(r.data.user)).catch(() => {
-      // fallback to localStorage
       const cached = JSON.parse(localStorage.getItem('user') || 'null')
-      if(cached) setUser(cached)
+      if (cached) setUser(cached)
     }).finally(() => setLoading(false))
   }, [])
 
-  if(loading){
+  if (loading) {
     return (
       <div className="container py-5">
         <div className="row justify-content-center">
           <div className="col-lg-7">
             <div className="eb-card p-5 text-center">
-              <span className="eb-spinner" style={{width:32,height:32,borderWidth:4}}></span>
-              <p className="text-muted mt-3">Loading profile…</p>
+              <span className="eb-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
+              <p style={{ color: 'var(--text-muted)', marginTop: '1rem', fontSize: '0.9rem' }}>Loading profile…</p>
             </div>
           </div>
         </div>
@@ -36,96 +58,102 @@ export default function Profile(){
     )
   }
 
-  if(!user){
+  if (!user) {
     return (
       <div className="container py-5 text-center">
-        <p className="text-muted">Unable to load profile. Please try again.</p>
+        <p style={{ color: 'var(--text-muted)' }}>Unable to load profile. Please try again.</p>
       </div>
     )
   }
 
-  const rc = roleConfig[user.role] || { icon:'👤', bg:'role-admin', label:'User', color:'#64748b' }
-  const initials = (user.name || 'U').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
-  const joinedDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : null
+  const rc = roleConfig[user.role] || { icon: User, bg: 'role-admin', label: 'User', color: '#64748b' }
+  const initials = (user.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const joinedDate = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null
 
   return (
     <div className="container py-5">
       <div className="row justify-content-center">
         <div className="col-lg-8">
-          <h2 style={{fontWeight:800,letterSpacing:'-0.5px'}} className="mb-4 animate-fade-up">My Profile</h2>
+          <div className="eb-page-header animate-fade-up" style={{ paddingBottom: '1.5rem' }}>
+            <div className="d-flex align-items-center gap-2 mb-1">
+              <User size={20} color="var(--brand-primary-light)" />
+              <h2 style={{ margin: 0 }}>My Profile</h2>
+            </div>
+            <p>Your account information and portal access details.</p>
+          </div>
 
-          {/* Profile card */}
+          {/* Profile header card */}
           <div className="eb-card p-4 mb-4 animate-fade-up">
             <div className="d-flex align-items-center gap-4 flex-wrap">
               <div className={`eb-avatar ${rc.bg}`}>{initials}</div>
               <div className="flex-grow-1">
-                <h4 style={{fontWeight:800,marginBottom:'0.25rem'}}>{user.name}</h4>
-                <p className="text-muted mb-2" style={{fontSize:'0.9rem'}}>{user.email}</p>
-                <span className={`eb-badge eb-badge-${user.role}`} style={{fontSize:'0.78rem',padding:'0.3rem 0.75rem'}}>
-                  {rc.icon} {rc.label}
-                </span>
+                <h4 style={{ fontWeight: 800, marginBottom: '0.2rem', letterSpacing: '-0.3px' }}>{user.name}</h4>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '0.75rem', fontSize: '0.9rem' }}>{user.email}</p>
+                <div className="d-flex align-items-center gap-2">
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: `${rc.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <rc.icon size={14} color={rc.color} />
+                  </div>
+                  <span className={`eb-badge eb-badge-${user.role}`}>{rc.label}</span>
+                </div>
               </div>
               {joinedDate && (
-                <div className="text-end" style={{fontSize:'0.8rem',color:'#94a3b8'}}>
-                  <div>Member since</div>
-                  <div style={{fontWeight:600,color:'#64748b'}}>{joinedDate}</div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>
+                    Member Since
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{joinedDate}</div>
                 </div>
               )}
             </div>
           </div>
 
           {/* Details grid */}
-          <div className="row g-3 animate-fade-up delay-2">
-            {/* Personal info */}
+          <div className="row g-4 animate-fade-up delay-2">
             <div className="col-md-6">
               <div className="eb-card p-4 h-100">
-                <h6 style={{fontWeight:700,textTransform:'uppercase',fontSize:'0.75rem',letterSpacing:'1px',color:'#94a3b8'}} className="mb-3">Personal Info</h6>
-                <dl className="row mb-0" style={{fontSize:'0.9rem'}}>
-                  <dt className="col-5 text-muted fw-normal">Full Name</dt>
-                  <dd className="col-7 fw-600 mb-2" style={{fontWeight:600}}>{user.name || '—'}</dd>
-
-                  <dt className="col-5 text-muted fw-normal">Email</dt>
-                  <dd className="col-7 mb-2" style={{wordBreak:'break-all'}}>{user.email || '—'}</dd>
-
-                  <dt className="col-5 text-muted fw-normal">Role</dt>
-                  <dd className="col-7 mb-2 text-capitalize">{rc.label}</dd>
-                </dl>
+                <div style={{ fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                  Personal Information
+                </div>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <DetailRow icon={User}  label="Full Name" value={user.name} />
+                  <DetailRow icon={Mail}  label="Email"     value={user.email} />
+                  <DetailRow icon={rc.icon} label="Role"   value={rc.label} />
+                </div>
               </div>
             </div>
 
-            {/* Account info */}
             <div className="col-md-6">
               <div className="eb-card p-4 h-100">
-                <h6 style={{fontWeight:700,textTransform:'uppercase',fontSize:'0.75rem',letterSpacing:'1px',color:'#94a3b8'}} className="mb-3">Account Details</h6>
-                <dl className="row mb-0" style={{fontSize:'0.9rem'}}>
+                <div style={{ fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                  Account Details
+                </div>
+                <div style={{ marginTop: '0.5rem' }}>
                   {user.registrationNo && (
-                    <>
-                      <dt className="col-5 text-muted fw-normal">Registration No</dt>
-                      <dd className="col-7 mb-2"><code style={{background:'#f1f5f9',padding:'0.15rem 0.5rem',borderRadius:6,fontSize:'0.85rem'}}>{user.registrationNo}</code></dd>
-                    </>
+                    <DetailRow icon={Hash} label="Registration No" value={user.registrationNo} mono />
                   )}
-                  <dt className="col-5 text-muted fw-normal">User ID</dt>
-                  <dd className="col-7 mb-2"><code style={{background:'#f1f5f9',padding:'0.15rem 0.5rem',borderRadius:6,fontSize:'0.75rem'}}>{user._id || user.id || '—'}</code></dd>
-
+                  <DetailRow icon={Hash}     label="User ID"  value={user._id || user.id || '—'} mono />
                   {joinedDate && (
-                    <>
-                      <dt className="col-5 text-muted fw-normal">Joined</dt>
-                      <dd className="col-7 mb-0">{joinedDate}</dd>
-                    </>
+                    <DetailRow icon={Calendar} label="Joined" value={joinedDate} />
                   )}
-                </dl>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Password note */}
-          <div className="eb-card p-4 mt-3 animate-fade-up delay-3" style={{background:'#f0f4ff',border:'none'}}>
+          <div className="eb-card p-4 mt-4 animate-fade-up delay-3"
+            style={{ background: 'linear-gradient(135deg,#f0f4ff,#e8eeff)', border: '1px solid #c7d2fe' }}>
             <div className="d-flex gap-3 align-items-start">
-              <span style={{fontSize:'1.5rem'}}>🔐</span>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(99,102,241,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <KeyRound size={18} color="#6366f1" />
+              </div>
               <div>
-                <h6 style={{fontWeight:700,marginBottom:'0.25rem'}}>Password Management</h6>
-                <p className="text-muted small mb-0">
-                  Password changes are managed by the school administrator. If you need to reset your password, please contact the admin office. Students can use their <strong>date of birth (DDMMYYYY)</strong> as the default password.
+                <h6 style={{ fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-primary)' }}>Password Management</h6>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0, lineHeight: 1.65 }}>
+                  Password changes are managed by the school administrator. If you need to reset your password, please contact the admin office.
+                  Students can use their <strong>date of birth (DDMMYYYY)</strong> as the default password.
                 </p>
               </div>
             </div>
