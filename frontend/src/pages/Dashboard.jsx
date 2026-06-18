@@ -222,10 +222,7 @@ export default function Dashboard() {
         <div className="row g-4">
           {[
             { icon: CalendarCheck,       title: 'Mark Attendance',  desc: 'Mark student attendance for your classes.',          to: '/attendance',     iconColor: '#4338ca', iconBg: 'rgba(99,102,241,.1)'  },
-            { icon: UtensilsCrossed,     title: 'Meal Menu',        desc: "Publish today's meal and update served count.",       to: '/meals',          iconColor: '#d97706', iconBg: 'rgba(245,158,11,.1)'  },
             { icon: Bell,               title: 'School Notices',    desc: 'Post announcements and academic schedules.',          to: '/notices',        iconColor: '#0369a1', iconBg: 'rgba(14,165,233,.1)'  },
-            { icon: MessageSquareWarning,title:'Complaints',        desc: 'Review and respond to student complaints.',           to: '/complaints',     iconColor: '#e11d48', iconBg: 'rgba(244,63,94,.1)'   },
-            { icon: Wrench,              title: 'Infrastructure',   desc: 'Report facility damage and monitor repairs.',         to: '/infrastructure', iconColor: '#0d9488', iconBg: 'rgba(13,148,136,.1)'  },
             { icon: Search,              title: 'Lost & Found',     desc: 'Help students recover lost valuables.',               to: '/lostfound',      iconColor: '#7c3aed', iconBg: 'rgba(124,58,237,.1)'  },
           ].map((card, i) => (
             <div key={i} className={`col-md-4 animate-fade-up delay-${i + 1}`}>

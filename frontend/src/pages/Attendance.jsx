@@ -15,6 +15,8 @@ export default function Attendance() {
   const [selectedClass, setSelectedClass]   = useState('')
   const [classStudents, setClassStudents]   = useState([])
   const [attendanceMap, setAttendanceMap]   = useState({})
+  const [attendanceMode, setAttendanceMode] = useState('absentees')
+  const [classAttendanceRecords, setClassAttendanceRecords] = useState([])
   const [studentId, setStudentId]           = useState('')
   const [studentRecord, setStudentRecord]   = useState(null)
   const [date, setDate]                     = useState(new Date().toISOString().slice(0, 10))
@@ -47,8 +49,30 @@ export default function Attendance() {
   }
 
   const filteredClasses = user.role === 'teacher'
-    ? classes.filter(cls => cls.classTeacher?._id === user.id || cls.classTeacher?._id === user._id)
+    ? classes.filter(cls => {
+        const teacherId = cls.classTeacher?._id || cls.classTeacher
+        const currentUserId = user.id || user._id
+        return String(teacherId) === String(currentUserId)
+      })
     : classes
+
+  const isMarkAbsentees = attendanceMode === 'absentees'
+  const isMarkPresenties = attendanceMode === 'presenties'
+
+  const computeAttendanceMap = (students, records) => {
+    return students.reduce((acc, s) => {
+      const rec = records.find(r => {
+        const studentId = `${s._id}`
+        return `${r.student}` === studentId || `${r.student?._id}` === studentId
+      })
+      if (rec) {
+        acc[s._id] = isMarkAbsentees ? rec.status === 'absent' : rec.status === 'present'
+      } else {
+        acc[s._id] = user.role === 'admin' ? 'pending' : false
+      }
+      return acc
+    }, {})
+  }
 
   const fetchClassStudents = async (classId, targetDate) => {
     if (!classId) { setClassStudents([]); setAttendanceMap({}); return }
@@ -56,24 +80,25 @@ export default function Attendance() {
       const rosterRes = await api.get(`/school-management/students?classId=${classId}`)
       const students = rosterRes.data
       setClassStudents(students)
+      if (!students.length) {
+        notify('No students found for the selected class. Check student-class assignments.', 'warning')
+      }
 
-      const attRes = await api.get(`/attendance/class/${classId}?date=${targetDate}`)
-      const records = attRes.data
+      let records = []
+      try {
+        const attRes = await api.get(`/attendance/class/${classId}?date=${targetDate}`)
+        records = attRes.data
+      } catch {
+        notify('Unable to load existing attendance for this class.', 'warning')
+      }
+      setClassAttendanceRecords(records)
 
-      const map = {}
-      students.forEach(s => {
-        const rec = records.find(r => r.student === s._id || r.student?._id === s._id)
-        if (rec) {
-          map[s._id] = rec.status === 'present'
-        } else {
-          map[s._id] = user.role === 'admin' ? 'pending' : true
-        }
-      })
+      const map = computeAttendanceMap(students, records)
       setAttendanceMap(map)
     } catch {
       setClassStudents([])
       setAttendanceMap({})
-      notify('Unable to load students and attendance.', 'error')
+      notify('Unable to load students for this class. Please verify class assignment.', 'error')
     }
   }
 
@@ -83,11 +108,17 @@ export default function Attendance() {
     }
   }, [selectedClass, date])
 
-  const togglePresent = id =>
+  useEffect(() => {
+    if (!classStudents.length) return
+    const map = computeAttendanceMap(classStudents, classAttendanceRecords)
+    setAttendanceMap(map)
+  }, [attendanceMode, classAttendanceRecords, classStudents, user.role])
+
+  const toggleSelected = id =>
     setAttendanceMap(prev => {
       const val = prev[id]
-      const nextVal = (val === 'pending' || val === false) ? true : false
-      return { ...prev, [id]: nextVal }
+      if (val === 'pending') return prev
+      return { ...prev, [id]: !val }
     })
 
   const submitAttendance = async e => {
@@ -97,8 +128,11 @@ export default function Attendance() {
     setSubmitting(true)
     try {
       await Promise.all(classStudents.map(s => {
-        const isPresent = attendanceMap[s._id] === true
-        return markAttendance({ studentId: s._id, date, status: isPresent ? 'present' : 'absent' })
+        const checked = attendanceMap[s._id] === true
+        const status = isMarkAbsentees
+          ? (checked ? 'absent' : 'present')
+          : (checked ? 'present' : 'absent')
+        return markAttendance({ studentId: s._id, date, status })
       }))
       notify(`Attendance saved for ${classStudents.length} students.`, 'success')
       fetchClassStudents(selectedClass, date)
@@ -143,9 +177,14 @@ export default function Attendance() {
   }, { total: 0, present: 0, absent: 0 })
   const pct = stats.total ? Math.round((stats.present / stats.total) * 100) : 0
 
-  const presentCount = classStudents.filter(s => attendanceMap[s._id] === true).length
-  const absentCount  = classStudents.filter(s => attendanceMap[s._id] === false).length
+  const checkedCount = classStudents.filter(s => attendanceMap[s._id] === true).length
   const pendingCount = classStudents.filter(s => attendanceMap[s._id] === 'pending').length
+  const presentCount = isMarkAbsentees
+    ? classStudents.length - checkedCount
+    : checkedCount
+  const absentCount = isMarkAbsentees
+    ? checkedCount
+    : classStudents.length - checkedCount
 
   return (
     <div className="container py-5">
@@ -177,6 +216,17 @@ export default function Attendance() {
               <form onSubmit={submitAttendance}>
                 <div className="row g-3 mb-3">
                   <div className={user.role === 'admin' ? "col-md-8" : "col-12"}>
+                    <label className="form-label">Attendance Mode</label>
+                    <select className="form-select mb-2" value={attendanceMode}
+                      onChange={e => setAttendanceMode(e.target.value)}>
+                      <option value="absentees">Mark Absentees</option>
+                      <option value="presenties">Mark Presenties</option>
+                    </select>
+                    <div className="form-text mb-3">
+                      {isMarkAbsentees
+                        ? 'All students are treated as Present by default. Select only absentees.'
+                        : 'All students are treated as Absent by default. Select only present students.'}
+                    </div>
                     <label className="form-label">Class / Section</label>
                     <select className="form-select" value={selectedClass}
                       onChange={e => setSelectedClass(e.target.value)}>
@@ -187,6 +237,11 @@ export default function Attendance() {
                         </option>
                       ))}
                     </select>
+                    {user.role === 'teacher' && filteredClasses.length === 0 && (
+                      <div className="mt-2 text-danger" style={{ fontSize: '0.9rem' }}>
+                        No class is assigned to your teacher account. Please contact admin to assign a class.
+                      </div>
+                    )}
                   </div>
                   <div className={user.role === 'admin' ? "col-md-4" : "col-md-6"}>
                     <label className="form-label">Date</label>
@@ -240,15 +295,20 @@ export default function Attendance() {
                         <tr>
                           <th>Reg No</th>
                           <th>Student Name</th>
-                          <th style={{ textAlign: 'center' }}>Present</th>
+                          <th style={{ textAlign: 'center' }}>Mark</th>
                           <th style={{ textAlign: 'center' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {classStudents.map(student => {
                           const status = attendanceMap[student._id]
-                          const isPresent = status === true
+                          const isChecked = status === true
                           const isPending = status === 'pending'
+                          const actualStatus = isPending
+                            ? 'pending'
+                            : isMarkAbsentees
+                              ? (isChecked ? 'absent' : 'present')
+                              : (isChecked ? 'present' : 'absent')
                           return (
                             <tr key={student._id}>
                               <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -258,20 +318,24 @@ export default function Attendance() {
                               <td style={{ textAlign: 'center' }}>
                                 <input
                                   type="checkbox"
-                                  className="eb-checkbox-attendance"
+                                  className={`eb-checkbox-attendance ${isChecked ? (isMarkAbsentees ? 'absentees-checked' : 'presenties-checked') : ''}`}
                                   id={`att-${student._id}`}
-                                  checked={isPresent}
+                                  checked={isChecked}
                                   disabled={user.role === 'admin'}
                                   onChange={() => {
                                     if (user.role !== 'admin') {
-                                      togglePresent(student._id)
+                                      toggleSelected(student._id)
                                     }
                                   }}
                                 />
                               </td>
                               <td style={{ textAlign: 'center' }}>
-                                <span className={`eb-badge ${isPresent ? 'eb-badge-present' : isPending ? 'eb-badge-pending' : 'eb-badge-absent'}`}>
-                                  {isPresent ? 'Present' : isPending ? 'Pending / Not Marked' : 'Absent'}
+                                <span className={`eb-badge ${isPending ? 'eb-badge-pending' : actualStatus === 'present' ? 'eb-badge-present' : 'eb-badge-absent'}`}>
+                                  {isPending
+                                    ? 'Pending / Not Marked'
+                                    : actualStatus === 'present'
+                                      ? 'Present'
+                                      : 'Absent'}
                                 </span>
                               </td>
                             </tr>

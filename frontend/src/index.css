@@ -1026,6 +1026,16 @@ h1, h2, h3, h4, h5, h6 {
 .eb-checkbox-attendance:hover:not(:checked) {
   border-color: var(--brand-primary-light);
 }
+.eb-checkbox-attendance.absentees-checked:checked {
+  background: #dc2626;
+  border-color: #dc2626;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 4'/%3E%3C/svg%3E");
+}
+.eb-checkbox-attendance.presenties-checked:checked {
+  background: #059669;
+  border-color: #059669;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 4'/%3E%3C/svg%3E");
+}
 
 /* ============================================================
    UTILITY HELPERS

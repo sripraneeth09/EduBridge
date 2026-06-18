@@ -81,8 +81,25 @@ exports.listStudents = async (req, res) => {
   try{
     const { classId, userId } = req.query;
     const query = {};
-    if(classId) query.class = classId;
-    if(userId) query.user = userId;
+
+    if (classId) {
+      const classDoc = await Class.findById(classId).select('name section');
+      const classQuery = [{ class: classId }];
+      if (classDoc) {
+        const classNames = [classDoc.name];
+        if (classDoc.section) {
+          classNames.push(`${classDoc.name}${classDoc.section}`);
+          classNames.push(`${classDoc.name} ${classDoc.section}`);
+        }
+        classQuery.push({ className: { $in: classNames } });
+        if (classDoc.section) {
+          classQuery.push({ section: classDoc.section });
+        }
+      }
+      query.$or = classQuery;
+    }
+
+    if (userId) query.user = userId;
     const students = await Student.find(query)
       .populate('user', 'name email registrationNo')
       .populate('class', 'name grade section');

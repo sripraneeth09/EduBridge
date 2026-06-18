@@ -1,5 +1,6 @@
 const Attendance = require('../models/Attendance');
 const Student = require('../models/Student');
+const Class = require('../models/Class');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 
@@ -106,13 +107,33 @@ exports.getClassAttendance = async (req, res) => {
 
     const queryDate = new Date(date);
     // Get all students of this class
-    const students = await Student.find({ class: classId }).select('_id');
+    const classById = await Class.findById(classId).select('name section');
+    const studentFilter = [{ class: classId }];
+
+    if (classById) {
+      const classNames = [classById.name];
+      if (classById.section) {
+        classNames.push(`${classById.name}${classById.section}`);
+        classNames.push(`${classById.name} ${classById.section}`);
+      }
+      studentFilter.push({ className: { $in: classNames } });
+      if (classById.section) {
+        studentFilter.push({ section: classById.section });
+      }
+    }
+
+    const students = await Student.find({ $or: studentFilter }).select('_id');
     const studentIds = students.map(s => s._id);
+
+    const startOfDay = new Date(queryDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(queryDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
     // Find attendance records for these students on this day
     const records = await Attendance.find({
       student: { $in: studentIds },
-      date: queryDate
+      date: { $gte: startOfDay, $lt: endOfDay }
     });
 
     res.json(records);
