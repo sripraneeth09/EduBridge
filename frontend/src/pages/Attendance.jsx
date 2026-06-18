@@ -46,20 +46,49 @@ export default function Attendance() {
     } catch { notify('Unable to load student profile.', 'error') }
   }
 
-  const fetchClassStudents = async classId => {
-    setSelectedClass(classId)
-    if (!classId) { setClassStudents([]); return }
+  const filteredClasses = user.role === 'teacher'
+    ? classes.filter(cls => cls.classTeacher?._id === user.id || cls.classTeacher?._id === user._id)
+    : classes
+
+  const fetchClassStudents = async (classId, targetDate) => {
+    if (!classId) { setClassStudents([]); setAttendanceMap({}); return }
     try {
-      const res = await api.get(`/school-management/students?classId=${classId}`)
-      setClassStudents(res.data)
+      const rosterRes = await api.get(`/school-management/students?classId=${classId}`)
+      const students = rosterRes.data
+      setClassStudents(students)
+
+      const attRes = await api.get(`/attendance/class/${classId}?date=${targetDate}`)
+      const records = attRes.data
+
       const map = {}
-      res.data.forEach(s => { map[s._id] = true }) // true = present
+      students.forEach(s => {
+        const rec = records.find(r => r.student === s._id || r.student?._id === s._id)
+        if (rec) {
+          map[s._id] = rec.status === 'present'
+        } else {
+          map[s._id] = user.role === 'admin' ? 'pending' : true
+        }
+      })
       setAttendanceMap(map)
-    } catch { setClassStudents([]); notify('Unable to load students.', 'error') }
+    } catch {
+      setClassStudents([])
+      setAttendanceMap({})
+      notify('Unable to load students and attendance.', 'error')
+    }
   }
 
+  useEffect(() => {
+    if (user.role === 'teacher' || user.role === 'admin') {
+      fetchClassStudents(selectedClass, date)
+    }
+  }, [selectedClass, date])
+
   const togglePresent = id =>
-    setAttendanceMap(prev => ({ ...prev, [id]: !prev[id] }))
+    setAttendanceMap(prev => {
+      const val = prev[id]
+      const nextVal = (val === 'pending' || val === false) ? true : false
+      return { ...prev, [id]: nextVal }
+    })
 
   const submitAttendance = async e => {
     e.preventDefault()
@@ -67,10 +96,12 @@ export default function Attendance() {
     if (!classStudents.length) { notify('No students in this class.', 'error'); return }
     setSubmitting(true)
     try {
-      await Promise.all(classStudents.map(s =>
-        markAttendance({ studentId: s._id, date, status: attendanceMap[s._id] ? 'present' : 'absent' })
-      ))
+      await Promise.all(classStudents.map(s => {
+        const isPresent = attendanceMap[s._id] === true
+        return markAttendance({ studentId: s._id, date, status: isPresent ? 'present' : 'absent' })
+      }))
       notify(`Attendance saved for ${classStudents.length} students.`, 'success')
+      fetchClassStudents(selectedClass, date)
     } catch { notify('Unable to save attendance. Please try again.', 'error') }
     finally { setSubmitting(false) }
   }
@@ -112,8 +143,9 @@ export default function Attendance() {
   }, { total: 0, present: 0, absent: 0 })
   const pct = stats.total ? Math.round((stats.present / stats.total) * 100) : 0
 
-  const presentCount = classStudents.filter(s => attendanceMap[s._id]).length
-  const absentCount  = classStudents.length - presentCount
+  const presentCount = classStudents.filter(s => attendanceMap[s._id] === true).length
+  const absentCount  = classStudents.filter(s => attendanceMap[s._id] === false).length
+  const pendingCount = classStudents.filter(s => attendanceMap[s._id] === 'pending').length
 
   return (
     <div className="container py-5">
@@ -144,35 +176,37 @@ export default function Attendance() {
 
               <form onSubmit={submitAttendance}>
                 <div className="row g-3 mb-3">
-                  <div className="col-12">
+                  <div className={user.role === 'admin' ? "col-md-8" : "col-12"}>
                     <label className="form-label">Class / Section</label>
                     <select className="form-select" value={selectedClass}
-                      onChange={e => fetchClassStudents(e.target.value)}>
+                      onChange={e => setSelectedClass(e.target.value)}>
                       <option value="">Select Class / Section</option>
-                      {classes.map(cls => (
+                      {filteredClasses.map(cls => (
                         <option key={cls._id} value={cls._id}>
                           {`${cls.name} — Grade ${cls.grade} ${cls.section || ''}`}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <div className="col-md-6">
+                  <div className={user.role === 'admin' ? "col-md-4" : "col-md-6"}>
                     <label className="form-label">Date</label>
                     <input type="date" className="form-control" value={date}
                       onChange={e => setDate(e.target.value)} required />
                   </div>
-                  <div className="col-md-6 d-flex align-items-end">
-                    <button className="eb-btn-primary btn w-100" disabled={submitting || !classStudents.length}>
-                      {submitting
-                        ? <><span className="eb-spinner" />Saving…</>
-                        : <><Save size={14} />Save Attendance</>}
-                    </button>
-                  </div>
+                  {user.role !== 'admin' && (
+                    <div className="col-md-6 d-flex align-items-end">
+                      <button className="eb-btn-primary btn w-100" disabled={submitting || !classStudents.length}>
+                        {submitting
+                          ? <><span className="eb-spinner" />Saving…</>
+                          : <><Save size={14} />Save Attendance</>}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Summary bar */}
                 {classStudents.length > 0 && (
-                  <div className="d-flex gap-3 mb-3 p-3 rounded-3" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
+                  <div className="d-flex flex-wrap gap-3 mb-3 p-3 rounded-3" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
                     <div className="d-flex align-items-center gap-2">
                       <CheckCircle2 size={14} color="#059669" />
                       <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#059669' }}>
@@ -185,6 +219,14 @@ export default function Attendance() {
                         {absentCount} Absent
                       </span>
                     </div>
+                    {pendingCount > 0 && (
+                      <div className="d-flex align-items-center gap-2">
+                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#92400e' }} />
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#92400e' }}>
+                          {pendingCount} Pending / Not Marked
+                        </span>
+                      </div>
+                    )}
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
                       {classStudents.length} total
                     </span>
@@ -204,7 +246,9 @@ export default function Attendance() {
                       </thead>
                       <tbody>
                         {classStudents.map(student => {
-                          const isPresent = !!attendanceMap[student._id]
+                          const status = attendanceMap[student._id]
+                          const isPresent = status === true
+                          const isPending = status === 'pending'
                           return (
                             <tr key={student._id}>
                               <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -217,12 +261,17 @@ export default function Attendance() {
                                   className="eb-checkbox-attendance"
                                   id={`att-${student._id}`}
                                   checked={isPresent}
-                                  onChange={() => togglePresent(student._id)}
+                                  disabled={user.role === 'admin'}
+                                  onChange={() => {
+                                    if (user.role !== 'admin') {
+                                      togglePresent(student._id)
+                                    }
+                                  }}
                                 />
                               </td>
                               <td style={{ textAlign: 'center' }}>
-                                <span className={`eb-badge ${isPresent ? 'eb-badge-present' : 'eb-badge-absent'}`}>
-                                  {isPresent ? 'Present' : 'Absent'}
+                                <span className={`eb-badge ${isPresent ? 'eb-badge-present' : isPending ? 'eb-badge-pending' : 'eb-badge-absent'}`}>
+                                  {isPresent ? 'Present' : isPending ? 'Pending / Not Marked' : 'Absent'}
                                 </span>
                               </td>
                             </tr>

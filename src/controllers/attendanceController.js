@@ -95,3 +95,28 @@ exports.monthlyReport = async (req, res) => {
     res.json(records);
   }catch(err){ res.status(500).json({ message: err.message }); }
 };
+
+exports.getClassAttendance = async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { date } = req.query; // Expecting YYYY-MM-DD
+    if (!date) {
+      return res.status(400).json({ message: 'Date query parameter is required.' });
+    }
+
+    const queryDate = new Date(date);
+    // Get all students of this class
+    const students = await Student.find({ class: classId }).select('_id');
+    const studentIds = students.map(s => s._id);
+
+    // Find attendance records for these students on this day
+    const records = await Attendance.find({
+      student: { $in: studentIds },
+      date: queryDate
+    });
+
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

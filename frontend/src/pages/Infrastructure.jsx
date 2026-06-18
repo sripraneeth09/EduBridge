@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import api from '../services/api'
 import {
   Wrench, MapPin, AlertTriangle, CheckCircle2, Clock,
@@ -24,6 +25,9 @@ const statusFlow = ['open', 'assigned', 'in progress', 'resolved']
 
 export default function Infrastructure() {
   const user = JSON.parse(localStorage.getItem('user') || 'null') || {}
+  if (user.role === 'teacher') {
+    return <Navigate to="/dashboard" replace />
+  }
   const [title, setTitle]               = useState('')
   const [description, setDescription]   = useState('')
   const [location, setLocation]         = useState('')

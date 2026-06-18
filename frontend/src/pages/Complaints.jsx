@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import api from '../services/api'
 import {
   MessageSquareWarning, Tag, Send, Inbox, Clock,
@@ -38,6 +39,9 @@ function StatusTimeline({ status }) {
 
 export default function Complaints() {
   const user = JSON.parse(localStorage.getItem('user') || 'null') || {}
+  if (user.role === 'teacher') {
+    return <Navigate to="/dashboard" replace />
+  }
   const [title, setTitle]             = useState('')
   const [category, setCategory]       = useState('other')
   const [description, setDescription] = useState('')

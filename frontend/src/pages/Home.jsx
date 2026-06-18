@@ -83,6 +83,7 @@ const loginOptions = [
 ]
 
 export default function Home() {
+  const logged = !!localStorage.getItem('token')
   return (
     <div>
       {/* ── HERO ── */}
@@ -102,9 +103,15 @@ export default function Home() {
                 An all-in-one smart portal unifying students, parents, teachers, and school operations under a modern, transparent administration system.
               </p>
               <div className="d-flex gap-3 flex-wrap align-items-center">
-                <Link className="eb-btn-primary" to="/login" style={{ padding: '0.7rem 1.75rem', fontSize: '0.9rem' }}>
-                  Get Started <ArrowRight size={15} />
-                </Link>
+                {logged ? (
+                  <Link className="eb-btn-primary" to="/dashboard" style={{ padding: '0.7rem 1.75rem', fontSize: '0.9rem' }}>
+                    Go to Dashboard <ArrowRight size={15} />
+                  </Link>
+                ) : (
+                  <Link className="eb-btn-primary" to="/login" style={{ padding: '0.7rem 1.75rem', fontSize: '0.9rem' }}>
+                    Get Started <ArrowRight size={15} />
+                  </Link>
+                )}
                 <Link className="eb-btn-outline" to="/services" style={{ padding: '0.65rem 1.6rem', fontSize: '0.9rem' }}>
                   Learn More
                 </Link>
@@ -164,7 +171,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW TO JOIN ── */}
+      {/* ── HOW TO JOIN — only shown when not logged in ── */}
+      {!logged && (
       <section style={{ background: 'linear-gradient(135deg,#f0f4ff 0%,#e8f4fd 100%)', padding: '5rem 0' }}>
         <div className="container">
           <div className="row align-items-center g-5">
@@ -230,6 +238,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── FEATURES ── */}
       <section className="container py-5 my-2">
@@ -262,14 +271,29 @@ export default function Home() {
               background: 'radial-gradient(ellipse 60% 60% at 50% 0%, rgba(37,99,235,.25) 0%, transparent 70%)',
             }} />
             <GraduationCap size={36} color="rgba(255,255,255,0.15)" style={{ marginBottom: '1rem' }} />
-            <h2 style={{ fontWeight: 800, fontSize: '2rem', position: 'relative' }}>Ready to get started?</h2>
-            <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: 480, margin: '0.75rem auto 2rem', position: 'relative', fontSize: '0.95rem' }}>
-              Contact your school administrator to get access credentials, then login to your personalised portal.
-            </p>
-            <Link className="btn px-5 py-3" to="/login"
-              style={{ background: '#fff', color: 'var(--brand-primary)', fontWeight: 700, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', fontSize: '0.9rem', position: 'relative' }}>
-              Login Now <ArrowRight size={14} style={{ marginLeft: 4 }} />
-            </Link>
+            {logged ? (
+              <>
+                <h2 style={{ fontWeight: 800, fontSize: '2rem', position: 'relative' }}>Welcome back!</h2>
+                <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: 480, margin: '0.75rem auto 2rem', position: 'relative', fontSize: '0.95rem' }}>
+                  Head to your dashboard to access all school services and tools.
+                </p>
+                <Link className="btn px-5 py-3" to="/dashboard"
+                  style={{ background: '#fff', color: 'var(--brand-primary)', fontWeight: 700, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', fontSize: '0.9rem', position: 'relative' }}>
+                  Go to Dashboard <ArrowRight size={14} style={{ marginLeft: 4 }} />
+                </Link>
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontWeight: 800, fontSize: '2rem', position: 'relative' }}>Ready to get started?</h2>
+                <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: 480, margin: '0.75rem auto 2rem', position: 'relative', fontSize: '0.95rem' }}>
+                  Contact your school administrator to get access credentials, then login to your personalised portal.
+                </p>
+                <Link className="btn px-5 py-3" to="/login"
+                  style={{ background: '#fff', color: 'var(--brand-primary)', fontWeight: 700, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', fontSize: '0.9rem', position: 'relative' }}>
+                  Login Now <ArrowRight size={14} style={{ marginLeft: 4 }} />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

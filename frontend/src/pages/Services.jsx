@@ -66,6 +66,24 @@ const stats = [
 import { Zap } from 'lucide-react'
 
 export default function Services() {
+  const logged = !!localStorage.getItem('token')
+
+  // When logged in, point service cards to their actual destination pages
+  const loggedLinks = [
+    { link: '/attendance',    cta: 'View Attendance'   }, // Student Access
+    { link: '/dashboard',     cta: 'Go to Dashboard'   }, // Parent Access
+    { link: '/attendance',    cta: 'Mark Attendance'   }, // Teacher Access
+    { link: '/dashboard',     cta: 'Open Dashboard'    }, // Admin Dashboard
+    { link: '/infrastructure',cta: 'View Issues'       }, // Infrastructure
+    { link: '/lostfound',     cta: 'View Lost & Found' }, // Lost & Found
+  ]
+
+  const resolvedServices = services.map((s, i) => ({
+    ...s,
+    link: logged ? (loggedLinks[i]?.link ?? '/dashboard') : s.link,
+    cta:  logged ? (loggedLinks[i]?.cta  ?? 'Open')       : s.cta,
+  }))
+
   return (
     <div>
       {/* Hero strip */}
@@ -99,7 +117,7 @@ export default function Services() {
       {/* Services grid */}
       <div className="container py-5">
         <div className="row g-4">
-          {services.map((s, i) => (
+          {resolvedServices.map((s, i) => (
             <div key={i} className={`col-md-6 col-lg-4 animate-fade-up delay-${i + 1}`}>
               <div className="eb-feature-card d-flex flex-column">
                 <div className="eb-feature-icon-wrap" style={{ background: s.iconBg, color: s.iconColor }}>
@@ -115,7 +133,8 @@ export default function Services() {
           ))}
         </div>
 
-        {/* Info box */}
+        {/* Info box — only shown when not logged in */}
+        {!logged && (
         <div className="row mt-5">
           <div className="col-lg-8 mx-auto">
             <div className="eb-card p-5 text-center" style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '1px solid #c7d2fe' }}>
@@ -142,6 +161,7 @@ export default function Services() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   )

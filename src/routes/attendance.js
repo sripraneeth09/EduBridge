@@ -7,5 +7,6 @@ const roles = require('../middleware/roles');
 router.post('/mark', auth, roles(['teacher','admin']), ctrl.markAttendance);
 router.get('/student/:studentId', auth, roles(['teacher','admin','parent','student']), ctrl.getAttendanceByStudent);
 router.get('/report/monthly', auth, ctrl.monthlyReport);
+router.get('/class/:classId', auth, roles(['teacher','admin']), ctrl.getClassAttendance);
 
 module.exports = router;

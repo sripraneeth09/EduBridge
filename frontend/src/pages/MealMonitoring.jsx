@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import api from '../services/api'
 import { createMenu, updateCount, listMeals, rateMeal, listStock, createStock, deleteStock, updateStock } from '../services/mealService'
 import {
@@ -46,6 +47,9 @@ function StatusTimeline({ status }) {
 
 export default function MealMonitoring() {
   const user = JSON.parse(localStorage.getItem('user') || 'null') || {}
+  if (user.role === 'teacher') {
+    return <Navigate to="/dashboard" replace />
+  }
   const [meals, setMeals]                     = useState([])
   const [date, setDate]                       = useState(new Date().toISOString().slice(0, 10))
   const [menuName, setMenuName]               = useState('')

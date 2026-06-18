@@ -35,9 +35,6 @@ export default function Navbar() {
 
   const teacherLinks = [
     { icon: CalendarCheck,       label: 'Mark Attendance', to: '/attendance' },
-    { icon: UtensilsCrossed,     label: 'Meal Menu & Stock',to: '/meals' },
-    { icon: MessageSquareWarning,label: 'Complaints',      to: '/complaints' },
-    { icon: Wrench,              label: 'Infrastructure',  to: '/infrastructure' },
     { icon: Search,              label: 'Lost & Found',    to: '/lostfound' },
   ]
 
