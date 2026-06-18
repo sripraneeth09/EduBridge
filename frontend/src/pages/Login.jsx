@@ -30,7 +30,11 @@ export default function Login() {
       const { token, user } = res.data
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
-      navigate('/dashboard')
+      if (user.mustChangePassword) {
+        navigate('/change-password')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       setErr(err?.response?.data?.message || 'Login failed. Check your credentials.')
     } finally {

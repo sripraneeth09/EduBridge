@@ -7,6 +7,7 @@ const roles = require('../middleware/roles');
 router.get('/', auth, roles(['admin']), ctrl.listUsers);
 router.get('/:id', auth, roles(['admin']), ctrl.getUser);
 router.put('/:id', auth, roles(['admin']), ctrl.updateUser);
+router.put('/:id/reset-password', auth, roles(['admin']), ctrl.resetPassword);
 router.delete('/:id', auth, roles(['admin']), ctrl.deleteUser);
 
 module.exports = router;

@@ -17,6 +17,7 @@ import LostFound from './pages/LostFound'
 import Profile from './pages/Profile'
 import Services from './pages/Services'
 import ForgotPassword from './pages/ForgotPassword'
+import ChangePassword from './pages/ChangePassword'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -31,15 +32,16 @@ export default function App(){
         <Route path='/login' element={<Login/>} />
         <Route path='/register' element={<Register/>} />
         <Route path='/forgot-password' element={<ForgotPassword/>} />
+        <Route path='/change-password' element={<ProtectedRoute><ChangePassword/></ProtectedRoute>} />
         <Route path='/notices' element={<Notices/>} />
         <Route path='/profile' element={<ProtectedRoute><Profile/></ProtectedRoute>} />
         <Route path='/dashboard' element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
         
         {/* Admin Routes */}
-        <Route path='/admin/users' element={<ProtectedRoute><AdminUsers/></ProtectedRoute>} />
-        <Route path='/admin/students' element={<ProtectedRoute><AdminStudents/></ProtectedRoute>} />
-        <Route path='/admin/teachers' element={<ProtectedRoute><AdminTeachers/></ProtectedRoute>} />
-        <Route path='/admin/classes' element={<ProtectedRoute><AdminClasses/></ProtectedRoute>} />
+        <Route path='/admin/users' element={<ProtectedRoute role='admin'><AdminUsers/></ProtectedRoute>} />
+        <Route path='/admin/students' element={<ProtectedRoute role='admin'><AdminStudents/></ProtectedRoute>} />
+        <Route path='/admin/teachers' element={<ProtectedRoute role='admin'><AdminTeachers/></ProtectedRoute>} />
+        <Route path='/admin/classes' element={<ProtectedRoute role='admin'><AdminClasses/></ProtectedRoute>} />
         
         {/* School Service Routes */}
         <Route path='/attendance' element={<ProtectedRoute><Attendance/></ProtectedRoute>} />

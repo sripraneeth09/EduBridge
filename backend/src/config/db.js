@@ -3,6 +3,10 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+// Ensure indexes are created by default during development. In production you may
+// want to manage indexes via migrations and set autoIndex=false for performance.
+mongoose.set('autoIndex', process.env.NODE_ENV !== 'production');
+
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/edubridge';
 
 module.exports = async function connectDB(){

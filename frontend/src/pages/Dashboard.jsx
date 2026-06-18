@@ -166,6 +166,31 @@ export default function Dashboard() {
               Quick Access
             </h5>
           </div>
+          <div className="row g-4 mb-4">
+            <div className="col-md-6">
+              <div className="eb-card p-3">
+                <h6 style={{ fontWeight: 700 }}>Recent Students</h6>
+                <ul className="list-unstyled mb-0 mt-3">
+                  {summary?.recentStudents?.length ? summary.recentStudents.map(s => (
+                    <li key={s._id} className="py-2 border-bottom">
+                      <div style={{ fontWeight: 600 }}>{s.name}</div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{s.rollNo} • {s.className || '-'} • {new Date(s.createdAt).toLocaleDateString()}</div>
+                    </li>
+                  )) : <div className="text-muted">No recent students</div>}
+                </ul>
+              </div>
+            </div>
+            <div className="col-md-6">
+              <div className="eb-card p-3">
+                <h6 style={{ fontWeight: 700 }}>Students Per Class</h6>
+                <div className="d-flex flex-wrap gap-2 mt-3">
+                  {summary?.studentsPerClass?.length ? summary.studentsPerClass.map(c => (
+                    <span key={c.className} className="eb-badge" style={{ padding: '0.4rem .6rem' }}>{c.className || 'Unassigned'}: {c.count}</span>
+                  )) : <div className="text-muted">No data</div>}
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="row g-4">
             {[
               { icon: CalendarCheck,       title: 'Attendance',     desc: 'View & manage daily student attendance.',                  to: '/attendance',       color: 'eb-card-emerald', iconColor: '#059669', iconBg: 'rgba(16,185,129,.12)' },

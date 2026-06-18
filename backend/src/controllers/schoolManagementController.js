@@ -38,10 +38,11 @@ exports.deleteClass = async (req, res) => {
 exports.createStudent = async (req, res) => {
   try{
     const { name, email, rollNo, class: classId, dateOfBirth, parentName, parentPhone, parentEmail, admissionNo } = req.body;
-    if(!name || !email || !rollNo || !classId || !dateOfBirth) {
-      return res.status(400).json({ message: 'Name, email, class, roll number and date of birth are required.' });
+    if(!name || !rollNo || !classId || !dateOfBirth) {
+      return res.status(400).json({ message: 'Name, class, roll number and date of birth are required.' });
     }
 
+    const normalizedEmail = email ? email.toString().trim().toLowerCase() : undefined;
     const classDoc = await Class.findById(classId);
     const classLabel = classDoc ? `${classDoc.name}` : 'STU';
     const registrationNo = admissionNo ? admissionNo : `${classLabel}-${rollNo}`.replace(/\s+/g, '').toUpperCase();
@@ -49,13 +50,15 @@ exports.createStudent = async (req, res) => {
     const password = dobStr.replace(/-/g, '');
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+    const userData = {
       name,
-      email,
       registrationNo,
       password: hashedPassword,
       role: 'student'
-    });
+    };
+    if(normalizedEmail) userData.email = normalizedEmail;
+
+    const user = await User.create(userData);
 
     const student = await Student.create({
       user: user._id,

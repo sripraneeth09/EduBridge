@@ -1,103 +1,229 @@
-﻿import React, { useEffect, useState } from "react"
-import api from "../../services/api"
+﻿import React, { useEffect, useState } from 'react'
+import api from '../../services/api'
+import studentService from '../../services/studentService'
 
 export default function AdminStudents(){
   const [students, setStudents] = useState([])
   const [classes, setClasses] = useState([])
-  const [form, setForm] = useState({ name: "", email: "", rollNo: "", class: "", dateOfBirth: "", parentName: "", parentPhone: "", parentEmail: "", admissionNo: "" })
+  const [form, setForm] = useState({ name: '', email: '', rollNo: '', className: '', section: '', gender: '', dateOfBirth: '', parentName: '', parentPhone: '', admissionNo: '', address: '' })
   const [showForm, setShowForm] = useState(false)
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState('')
+  const [importSummary, setImportSummary] = useState(null)
+  const [page, setPage] = useState(1)
+  const [limit] = useState(10)
+  const [total, setTotal] = useState(0)
+  const [q, setQ] = useState('')
+  const [filterClass, setFilterClass] = useState('')
+  const [filterSection, setFilterSection] = useState('')
+  const [file, setFile] = useState(null)
 
-  useEffect(() => {
-    loadStudents()
-    loadClasses()
-  }, [])
+  useEffect(() => { setPage(1); }, [q, filterClass, filterSection])
+  useEffect(() => { loadStudents(); }, [page, q, filterClass, filterSection])
+  useEffect(() => { loadClasses() }, [])
 
-  const loadStudents = () => {
-    api.get("/school-management/students").then(r => setStudents(r.data)).catch(() => {})
+  const loadStudents = async () => {
+    try{
+      const res = await studentService.list({ page, limit, q, className: filterClass, section: filterSection })
+      setStudents(res.data.students)
+      setTotal(res.data.total)
+    }catch(e){ setMessage('Failed loading students') }
   }
 
   const loadClasses = () => {
-    api.get("/school-management/classes").then(r => setClasses(r.data)).catch(() => {})
+    api.get('/school-management/classes').then(r => setClasses(r.data)).catch(() => {})
   }
 
   const submitForm = async e => {
     e.preventDefault()
-    try {
-      const res = await api.post("/school-management/students", form)
-      setMessage(`Student created. Registration: ${res.data.credentials.registrationNo} Password: ${res.data.credentials.password}`)
-      setForm({ name: "", email: "", rollNo: "", class: "", dateOfBirth: "", parentName: "", parentPhone: "", parentEmail: "", admissionNo: "" })
+    try{
+      await studentService.create(form)
+      setMessage('Student created')
+      setForm({ name: '', email: '', rollNo: '', className: '', section: '', gender: '', dateOfBirth: '', parentName: '', parentPhone: '', admissionNo: '', address: '' })
       loadStudents()
-    } catch (err) {
-      setMessage('Error creating student.')
+    }catch(err){
+      setMessage(err.response?.data?.message || 'Error creating student')
     }
   }
 
   const deleteStudent = async id => {
-    try {
-      await api.delete("/school-management/students/" + id)
-      setMessage('Student deleted.')
+    if(!window.confirm('Delete this student?')) return
+    try{ await studentService.remove(id); setMessage('Deleted'); loadStudents() }catch(e){ setMessage('Delete failed') }
+  }
+
+  const handleImport = async (e) => {
+    // invoked via button click; event is optional
+    if(e && e.preventDefault) e.preventDefault()
+    if(!file) return setMessage('Select a file first')
+    const fd = new FormData(); fd.append('file', file)
+    try{
+      const res = await studentService.import(fd)
+      setImportSummary(res.data)
+      setMessage(`Import completed: ${res.data.imported} imported, ${res.data.skipped} skipped`)
       loadStudents()
-    } catch (err) {
-      setMessage('Error deleting student.')
+    }catch(err){
+      const serverMessage = err.response?.data?.message || err.response?.data?.error || JSON.stringify(err.response?.data)
+      setMessage(serverMessage || 'Import failed')
+      setImportSummary(null)
     }
+  }
+
+  const handleExport = async () => {
+    try{
+      const res = await studentService.export()
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a'); a.href = url; a.download = 'students.xlsx'; a.click();
+      window.URL.revokeObjectURL(url)
+    }catch(e){ setMessage('Export failed') }
+  }
+
+  const handleTemplate = async () => {
+    try{
+      const res = await studentService.template()
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a'); a.href = url; a.download = 'students-template.xlsx'; a.click();
+      window.URL.revokeObjectURL(url)
+    }catch(e){ setMessage('Template download failed') }
   }
 
   return (
     <div className="container py-5">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h3>Manage Students</h3>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Close Form" : "Add Student"}
-        </button>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h3>Student Management</h3>
+        <div>
+          <button className="btn btn-outline-secondary me-2" onClick={() => setShowForm(!showForm)}>{showForm ? 'Close' : 'Add Student'}</button>
+          <button className="btn btn-outline-success me-2" onClick={handleExport}>Export Students</button>
+          <button className="btn btn-outline-primary" onClick={handleTemplate}>Download Template</button>
+        </div>
       </div>
 
       {message && <div className="alert alert-info">{message}</div>}
+      {importSummary && (
+        <div className="alert alert-success">
+          <p><strong>Import summary:</strong> {importSummary.imported} imported, {importSummary.skipped} skipped, {importSummary.total} total.</p>
+          {importSummary.createdUsers?.length > 0 && (
+            <div>
+              <p><strong>Created login details:</strong></p>
+              <ul className="mb-0">
+                {importSummary.createdUsers.map((u, index) => (
+                  <li key={index}>{u.admissionNo}: {u.password}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {importSummary.errors?.length > 0 && (
+            <div className="mt-2">
+              <p><strong>Row errors:</strong></p>
+              <ul className="mb-0">
+                {importSummary.errors.slice(0, 5).map((err, idx) => (
+                  <li key={idx}>Row {err.row}: {err.reason}</li>
+                ))}
+                {importSummary.errors.length > 5 && <li>...and {importSummary.errors.length - 5} more</li>}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {showForm && (
         <div className="card p-4 mb-4">
-          <h5>Create Student</h5>
+          <h5>{form._id ? 'Edit Student' : 'Create Student'}</h5>
           <form onSubmit={submitForm} className="row g-3">
             <div className="col-md-4"><input className="form-control" placeholder="Full Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
-            <div className="col-md-4"><input type="email" className="form-control" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
+            <div className="col-md-4"><input type="email" className="form-control" placeholder="Email (optional)" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
             <div className="col-md-4"><input className="form-control" placeholder="Roll Number" value={form.rollNo} onChange={e => setForm({ ...form, rollNo: e.target.value })} required /></div>
-            <div className="col-md-4">
-              <select className="form-select" value={form.class} onChange={e => setForm({ ...form, class: e.target.value })} required>
+            <div className="col-md-3">
+              <select className="form-select" value={form.className} onChange={e => setForm({ ...form, className: e.target.value })}>
                 <option value="">Select Class</option>
-                {classes.map(c => <option key={c._id} value={c._id}>{`${c.name} / Grade ${c.grade} ${c.section ? '- ' + c.section : ''}`}</option>)}
+                {classes.map(c => <option key={c._id} value={c.name}>{`${c.name}`}</option>)}
               </select>
             </div>
-            <div className="col-md-4"><input type="date" className="form-control" placeholder="Date of Birth" value={form.dateOfBirth} onChange={e => setForm({ ...form, dateOfBirth: e.target.value })} required /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Admission Number" value={form.admissionNo} onChange={e => setForm({ ...form, admissionNo: e.target.value })} /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Parent Name" value={form.parentName} onChange={e => setForm({ ...form, parentName: e.target.value })} required /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Parent Phone" value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} required /></div>
-            <div className="col-md-4"><input type="email" className="form-control" placeholder="Parent Email" value={form.parentEmail} onChange={e => setForm({ ...form, parentEmail: e.target.value })} /></div>
-            <div className="col-12"><button className="btn btn-success">Create Student</button></div>
+            <div className="col-md-3"><input className="form-control" placeholder="Section" value={form.section} onChange={e => setForm({ ...form, section: e.target.value })} /></div>
+            <div className="col-md-3">
+              <select className="form-select" value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
+                <option value="">Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="col-md-3"><input type="date" className="form-control" value={form.dateOfBirth} onChange={e => setForm({ ...form, dateOfBirth: e.target.value })} /></div>
+            <div className="col-md-4"><input className="form-control" placeholder="Admission Number" value={form.admissionNo} onChange={e => setForm({ ...form, admissionNo: e.target.value })} required /></div>
+            <div className="col-md-4"><input className="form-control" placeholder="Parent Name" value={form.parentName} onChange={e => setForm({ ...form, parentName: e.target.value })} /></div>
+            <div className="col-md-4"><input className="form-control" placeholder="Parent Phone" value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} /></div>
+            <div className="col-12"><input className="form-control" placeholder="Address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+            <div className="col-12"><button className="btn btn-success">{form._id ? 'Update' : 'Create Student'}</button></div>
           </form>
         </div>
       )}
 
+      <div className="card p-3 mb-3">
+        <div className="row g-2 align-items-center">
+          <div className="col-md-3"><input className="form-control" placeholder="Search by name, roll or admission" value={q} onChange={e => setQ(e.target.value)} /></div>
+          <div className="col-md-2">
+            <select className="form-select" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
+              <option value="">Filter Class</option>
+              {classes.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="col-md-2"><input className="form-control" placeholder="Filter Section" value={filterSection} onChange={e => setFilterSection(e.target.value)} /></div>
+          <div className="col-md-2">
+            <input type="file" accept=".csv,.xls,.xlsx" onChange={e => setFile(e.target.files[0])} className="form-control" />
+          </div>
+          <div className="col-md-3 text-end">
+            <button className="btn btn-primary me-2" onClick={handleImport}>Import</button>
+            <small className="text-muted">Use template for exact columns</small>
+          </div>
+        </div>
+      </div>
+
       <div className="table-responsive">
         <table className="table table-hover">
           <thead className="table-light">
-            <tr><th>Registration No</th><th>Name</th><th>Email</th><th>Roll</th><th>Class</th><th>Parent Phone</th><th>Actions</th></tr>
+            <tr>
+              <th>Name</th>
+              <th>Roll No</th>
+              <th>Admission No</th>
+              <th>Class</th>
+              <th>Section</th>
+              <th>Gender</th>
+              <th>DOB</th>
+              <th>Parent Name</th>
+              <th>Parent Phone</th>
+              <th>Address</th>
+              <th>Added</th>
+              <th>Actions</th>
+            </tr>
           </thead>
           <tbody>
             {students.map(s => (
               <tr key={s._id}>
-                <td>{s.registrationNo || s.user.registrationNo || '-'}</td>
-                <td><strong>{s.user.name}</strong></td>
-                <td>{s.user.email}</td>
+                <td><strong>{s.name}</strong></td>
                 <td>{s.rollNo}</td>
-                <td>{s.class?.name || '-'}</td>
+                <td>{s.admissionNo}</td>
+                <td>{s.className || '-'}</td>
+                <td>{s.section || '-'}</td>
+                <td>{s.gender || '-'}</td>
+                <td>{s.dateOfBirth ? new Date(s.dateOfBirth).toLocaleDateString() : '-'}</td>
+                <td>{s.parentName || '-'}</td>
                 <td>{s.parentPhone || '-'}</td>
+                <td>{s.address || '-'}</td>
+                <td>{new Date(s.createdAt).toLocaleDateString()}</td>
                 <td>
+                  <button className="btn btn-sm btn-outline-primary me-2" onClick={() => { setForm(s); setShowForm(true) }}>Edit</button>
                   <button className="btn btn-sm btn-danger" onClick={() => deleteStudent(s._id)}>Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="d-flex justify-content-between align-items-center">
+        <div>Showing {students.length} of {total}</div>
+        <div>
+          <button className="btn btn-sm btn-outline-secondary me-2" disabled={page<=1} onClick={() => setPage(p => p-1)}>Prev</button>
+          <button className="btn btn-sm btn-outline-secondary" disabled={students.length<limit} onClick={() => setPage(p => p+1)}>Next</button>
+        </div>
       </div>
     </div>
   )

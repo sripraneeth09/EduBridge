@@ -22,6 +22,7 @@ app.use('/api/infrastructure', require('./routes/infrastructure'));
 app.use('/api/lostfound', require('./routes/lostfound'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/students', require('./routes/students'));
 
 app.get('/', (req, res) => res.send({ status: 'ok', app: 'EduBridge Portal API' }));
 

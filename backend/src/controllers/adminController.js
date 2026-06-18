@@ -22,6 +22,31 @@ exports.summary = async (req, res) => {
     const openIssues = await Infrastructure.countDocuments({ status: { $ne: 'resolved' } });
     const lostCount = await LostItem.countDocuments();
 
-    res.json({ totalUsers, totalStudents, totalTeachers, attendanceToday, mealsServed, openComplaints, openIssues, lostCount });
+    // recent students
+    const recentStudents = await Student.find().sort({ createdAt: -1 }).limit(5).select('name rollNo admissionNo className createdAt').lean();
+
+    // students per class aggregation
+    const studentsPerClass = await Student.aggregate([
+      { $project: {
+          classSection: {
+            $concat: [
+              { $ifNull: ['$className', ''] },
+              {
+                $cond: [
+                  { $or: [{ $eq: ['$section', null] }, { $eq: ['$section', ''] }] },
+                  '',
+                  '$section'
+                ]
+              }
+            ]
+          }
+        }
+      },
+      { $group: { _id: '$classSection', count: { $sum: 1 } } },
+      { $project: { className: '$_id', count: 1, _id: 0 } },
+      { $sort: { count: -1 } }
+    ]);
+
+    res.json({ totalUsers, totalStudents, totalTeachers, attendanceToday, mealsServed, openComplaints, openIssues, lostCount, recentStudents, studentsPerClass });
   }catch(err){ res.status(500).json({ message: err.message }); }
 };

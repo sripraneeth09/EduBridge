@@ -12,11 +12,13 @@ exports.login = async (req, res) => {
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ message: 'Email or registration number is required' });
     }
-    const identifier = email.trim();
+    const identifier = email.toString().trim();
+    // Try exact email or registration number, both case-insensitive when possible.
+    const regexIdentifier = { $regex: `^${identifier.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}$`, $options: 'i' };
     const user = await User.findOne({
       $or: [
-        { email: identifier.toLowerCase() },
-        { registrationNo: { $regex: `^${identifier}$`, $options: 'i' } }
+        { email: regexIdentifier },
+        { registrationNo: regexIdentifier }
       ]
     });
     if(!user) return res.status(400).json({ message: 'Invalid credentials' });
@@ -31,12 +33,32 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        registrationNo: user.registrationNo
+        registrationNo: user.registrationNo,
+        mustChangePassword: !!user.mustChangePassword
       }
     });
   }catch(err){
     res.status(500).json({ message: err.message });
   }
+};
+
+// Allow authenticated user to change their password (requires old password)
+exports.changePassword = async (req, res) => {
+  try{
+    const userId = req.user && req.user._id;
+    if(!userId) return res.status(401).json({ message: 'Not authenticated' });
+    const { oldPassword, newPassword } = req.body;
+    if(!oldPassword || !newPassword) return res.status(400).json({ message: 'oldPassword and newPassword are required' });
+    const user = await User.findById(userId);
+    if(!user) return res.status(404).json({ message: 'User not found' });
+    const ok = await bcrypt.compare(oldPassword, user.password);
+    if(!ok) return res.status(400).json({ message: 'Invalid old password' });
+    const hashed = await bcrypt.hash(newPassword, 10);
+    user.password = hashed;
+    user.mustChangePassword = false;
+    await user.save();
+    res.json({ message: 'Password changed' });
+  }catch(err){ res.status(500).json({ message: err.message }); }
 };
 
 exports.me = async (req, res) => {
