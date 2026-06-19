@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import api from '../services/api'
+import api, { getUploadUrl } from '../services/api'
 import {
   MessageSquareWarning, Tag, Send, Inbox, Clock,
   CheckCircle2, RotateCcw, Eye
@@ -46,6 +46,7 @@ export default function Complaints() {
   const [category, setCategory]       = useState('other')
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous]     = useState(false)
+  const [photos, setPhotos]           = useState([])
   const [complaints, setComplaints]   = useState([])
   const [message, setMessage]         = useState('')
   const [msgType, setMsgType]         = useState('info')
@@ -65,8 +66,14 @@ export default function Complaints() {
   const submitComplaint = async e => {
     e.preventDefault()
     try {
-      await api.post('/complaints', { title, category, description, anonymous })
-      setTitle(''); setDescription(''); setAnonymous(false)
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('category', category)
+      formData.append('description', description)
+      formData.append('anonymous', anonymous)
+      photos.forEach(photo => formData.append('photos', photo))
+      await api.post('/complaints', formData)
+      setTitle(''); setDescription(''); setAnonymous(false); setPhotos([])
       notify('Complaint submitted. Track its status below.', 'success')
       loadComplaints()
     } catch { notify('Error submitting complaint.', 'error') }
@@ -75,6 +82,11 @@ export default function Complaints() {
   const updateStatus = async (id, status) => {
     try { await api.put(`/complaints/${id}/status`, { status }); notify('Status updated.', 'success'); loadComplaints() }
     catch { notify('Error updating status.', 'error') }
+  }
+
+  const deleteComplaint = async id => {
+    try { await api.delete(`/complaints/${id}`); notify('Complaint deleted.', 'success'); loadComplaints() }
+    catch { notify('Error deleting complaint.', 'error') }
   }
 
   const handleCommentChange = (id, text) => setCommentsMap(prev => ({ ...prev, [id]: text }))
@@ -140,6 +152,21 @@ export default function Complaints() {
                   <textarea className="form-control" rows={4}
                     placeholder="Describe your grievance in detail…"
                     value={description} onChange={e => setDescription(e.target.value)} required />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Photo evidence</label>
+                  <input type="file" className="form-control" accept="image/*" multiple
+                    onChange={e => setPhotos(Array.from(e.target.files).slice(0, 5))} />
+                  <small className="form-text text-muted">Upload up to 5 images (JPG, PNG, WEBP)</small>
+                  {photos.length > 0 && (
+                    <div className="mt-3 d-flex flex-wrap gap-2">
+                      {photos.map((photo, index) => (
+                        <div key={index} style={{ width: 72, height: 72, overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)' }}>
+                          <img src={URL.createObjectURL(photo)} alt={`preview-${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="d-flex align-items-center gap-2 mb-4 p-3 rounded-3"
                   style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', cursor: 'pointer' }}
@@ -209,6 +236,15 @@ export default function Complaints() {
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', whiteSpace: 'pre-line', marginBottom: 0 }}>
                           {comp.description}
                         </p>
+                        {comp.photos?.length > 0 && (
+                          <div className="d-flex flex-wrap gap-2 mt-3">
+                            {comp.photos.map((photo, idx) => (
+                              <a key={idx} href={getUploadUrl(photo)} target="_blank" rel="noreferrer" style={{ width: 96, height: 96, display: 'block', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                <img src={getUploadUrl(photo)} alt={`complaint-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="d-flex flex-column align-items-end gap-2" style={{ flexShrink: 0 }}>
                         <span className={`eb-badge ${statusBadge(comp.status)}`}>{comp.status}</span>
@@ -220,6 +256,17 @@ export default function Complaints() {
                             {statusSteps.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         )}
+                        {(() => {
+                          const currentId = `${user._id || user.id || ''}`
+                          const creatorId = `${comp.createdBy?._id || ''}`
+                          const canDelete = user.role === 'admin' || creatorId === currentId
+                          return canDelete ? (
+                            <button type="button" className="btn btn-sm btn-outline-danger py-0 px-2" style={{ borderRadius: 7, fontSize: '0.75rem' }}
+                              onClick={() => deleteComplaint(comp._id)}>
+                              Delete
+                            </button>
+                          ) : null
+                        })()}
                       </div>
                     </div>
 

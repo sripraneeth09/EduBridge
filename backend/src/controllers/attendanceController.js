@@ -45,6 +45,12 @@ exports.getAttendanceByStudent = async (req, res) => {
       return res.json([]);
     }
 
+    // Security: if requester is a parent, ensure the studentId matches parent's child
+    if (req.user.role === 'parent') {
+      const allowed = req.user.studentId && req.user.studentId.toString() === studentId.toString();
+      if (!allowed) return res.status(403).json({ message: 'Access denied' });
+    }
+
     const records = await Attendance.find({ student: studentId }).sort({ date: -1 });
     res.json(records);
   }catch(err){ res.status(500).json({ message: err.message }); }
@@ -60,7 +66,9 @@ exports.monthlyReport = async (req, res) => {
       if (!studentDoc) return res.status(404).json({ message: 'Student profile not found' });
       searchStudentId = studentDoc._id;
     } else if (req.user.role === 'parent') {
-      if (!searchStudentId) return res.status(400).json({ message: 'studentId is required for parents' });
+      // Parent should not need to pass studentId; derive from token
+      searchStudentId = req.user.studentId;
+      if (!searchStudentId) return res.status(400).json({ message: 'Student not associated with parent' });
     }
 
     if (searchStudentId) {

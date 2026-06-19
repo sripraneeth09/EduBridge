@@ -6,6 +6,7 @@ const issueSchema = new Schema({
   description: { type: String },
   location: { type: String },
   priority: { type: String, enum: ['low','medium','high','critical'], default: 'low' },
+  photos: [{ type: String }],
   image: { type: String },
   reportedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   assignedTo: { type: Schema.Types.ObjectId, ref: 'User' },

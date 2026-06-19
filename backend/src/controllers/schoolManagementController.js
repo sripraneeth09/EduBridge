@@ -79,7 +79,7 @@ exports.createStudent = async (req, res) => {
 
 exports.listStudents = async (req, res) => {
   try{
-    const { classId, userId } = req.query;
+    const { classId, userId, studentId } = req.query;
     const query = {};
 
     if (classId) {
@@ -99,7 +99,12 @@ exports.listStudents = async (req, res) => {
       query.$or = classQuery;
     }
 
-    if (userId) query.user = userId;
+    if (studentId) {
+      query._id = studentId;
+    } else if (userId) {
+      query.user = userId;
+    }
+
     const students = await Student.find(query)
       .populate('user', 'name email registrationNo')
       .populate('class', 'name grade section');

@@ -2,6 +2,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import Login from './pages/Login'
+import StudentLogin from './pages/StudentLogin'
+import TeacherLogin from './pages/TeacherLogin'
+import AdminLogin from './pages/AdminLogin'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Notices from './pages/Notices'
@@ -16,6 +19,8 @@ import Infrastructure from './pages/Infrastructure'
 import LostFound from './pages/LostFound'
 import Profile from './pages/Profile'
 import Services from './pages/Services'
+import ParentLogin from './pages/ParentLogin'
+import ParentDashboard from './pages/ParentDashboard'
 import ForgotPassword from './pages/ForgotPassword'
 import ChangePassword from './pages/ChangePassword'
 import Navbar from './components/Navbar'
@@ -30,6 +35,11 @@ export default function App(){
         <Route path='/' element={<Home/>} />
         <Route path='/services' element={<Services/>} />
         <Route path='/login' element={<Login/>} />
+        <Route path='/login/student' element={<StudentLogin/>} />
+        <Route path='/login/teacher' element={<TeacherLogin/>} />
+        <Route path='/login/admin' element={<AdminLogin/>} />
+        <Route path='/parent/login' element={<ParentLogin/>} />
+        <Route path='/parent/dashboard' element={<ProtectedRoute role='parent'><ParentDashboard/></ProtectedRoute>} />
         <Route path='/register' element={<Register/>} />
         <Route path='/forgot-password' element={<ForgotPassword/>} />
         <Route path='/change-password' element={<ProtectedRoute><ChangePassword/></ProtectedRoute>} />
@@ -44,6 +54,8 @@ export default function App(){
         <Route path='/admin/classes' element={<ProtectedRoute role='admin'><AdminClasses/></ProtectedRoute>} />
         
         {/* School Service Routes */}
+        <Route path='/parent/attendance' element={<ProtectedRoute role='parent'><ParentDashboard/></ProtectedRoute>} />
+        <Route path='/parent/exams' element={<ProtectedRoute role='parent'><ParentDashboard/></ProtectedRoute>} />
         <Route path='/attendance' element={<ProtectedRoute><Attendance/></ProtectedRoute>} />
         <Route path='/meals' element={<ProtectedRoute><MealMonitoring/></ProtectedRoute>} />
         <Route path='/complaints' element={<ProtectedRoute><Complaints/></ProtectedRoute>} />

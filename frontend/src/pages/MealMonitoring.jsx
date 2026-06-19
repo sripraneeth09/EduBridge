@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import api from '../services/api'
-import { createMenu, updateCount, listMeals, rateMeal, listStock, createStock, deleteStock, updateStock } from '../services/mealService'
+import api, { getUploadUrl } from '../services/api'
+import { createMenu, listMeals, rateMeal, deleteRating } from '../services/mealService'
 import {
-  UtensilsCrossed, Star, MessageSquareWarning, Send, CheckCircle2,
-  Clock, RotateCcw, ClipboardList, ThumbsUp, Inbox
+  UtensilsCrossed, Star, MessageSquareWarning, Send,
+  ClipboardList, ThumbsUp, Inbox
 } from 'lucide-react'
 
 function StarRating({ value, onChange }) {
@@ -22,8 +22,6 @@ function StarRating({ value, onChange }) {
     </div>
   )
 }
-
-const stockLevel = qty => qty < 10 ? 'eb-stock-low' : qty < 50 ? 'eb-stock-medium' : 'eb-stock-ok'
 
 const statusSteps = ['pending', 'under review', 'in progress', 'resolved']
 
@@ -54,15 +52,10 @@ export default function MealMonitoring() {
   const [date, setDate]                       = useState(new Date().toISOString().slice(0, 10))
   const [menuName, setMenuName]               = useState('')
   const [description, setDescription]         = useState('')
-  const [countDate, setCountDate]             = useState(new Date().toISOString().slice(0, 10))
-  const [numberServed, setNumberServed]       = useState(0)
   const [selectedMealId, setSelectedMealId]   = useState('')
   const [score, setScore]                     = useState(5)
   const [comment, setComment]                 = useState('')
-  const [stocks, setStocks]                   = useState([])
-  const [newItemName, setNewItemName]         = useState('')
-  const [newQuantity, setNewQuantity]         = useState(0)
-  const [newUnit, setNewUnit]                 = useState('kg')
+  const [ratingPhotos, setRatingPhotos]       = useState([])
   const [message, setMessage]                 = useState('')
   const [msgType, setMsgType]                 = useState('info')
   const [complaints, setComplaints]           = useState([])
@@ -76,11 +69,6 @@ export default function MealMonitoring() {
       setMeals(r.data)
       if (r.data[0] && !selectedMealId) setSelectedMealId(r.data[0]._id)
     }).catch(() => {})
-  }
-
-  const loadStock = () => {
-    if (user.role === 'teacher' || user.role === 'admin')
-      listStock().then(r => setStocks(r.data)).catch(() => {})
   }
 
   const loadComplaints = async () => {
@@ -118,9 +106,9 @@ export default function MealMonitoring() {
   useEffect(() => {
     if (user.role === 'admin') {
       loadComplaints()
+      loadMeals()
     } else {
       loadMeals()
-      loadStock()
     }
   }, [])
 
@@ -133,46 +121,49 @@ export default function MealMonitoring() {
     } catch { notify('Unable to create menu.', 'error') }
   }
 
-  const submitCount = async e => {
-    e.preventDefault()
-    try {
-      await updateCount({ date: countDate, numberServed: Number(numberServed) })
-      notify('Served count updated.', 'success')
-      setNumberServed(0); loadMeals()
-    } catch { notify('Unable to update count.', 'error') }
-  }
-
   const submitRating = async e => {
     e.preventDefault()
     if (!selectedMealId) { notify('Select a meal to rate.', 'error'); return }
     try {
-      await rateMeal({ mealId: selectedMealId, score: Number(score), comment })
+      const formData = new FormData()
+      formData.append('mealId', selectedMealId)
+      formData.append('score', Number(score))
+      formData.append('comment', comment)
+      ratingPhotos.forEach(photo => formData.append('photos', photo))
+
+      await rateMeal(formData)
       notify('Your rating has been saved!', 'success')
-      setComment(''); loadMeals()
-    } catch { notify('Unable to submit rating.', 'error') }
+      setComment(''); setRatingPhotos([]); loadMeals()
+    } catch (err) {
+      notify('Unable to submit rating.', 'error')
+      console.error(err)
+    }
   }
 
-  const submitStock = async e => {
-    e.preventDefault()
+  const deleteReview = async mealId => {
     try {
-      await createStock({ itemName: newItemName, quantity: Number(newQuantity), unit: newUnit })
-      notify('Stock item added.', 'success')
-      setNewItemName(''); setNewQuantity(0); loadStock()
-    } catch { notify('Unable to add stock item.', 'error') }
-  }
-
-  const handleAdjustStock = async (id, delta) => {
-    const item = stocks.find(s => s._id === id); if (!item) return
-    try { await updateStock(id, { quantity: Math.max(0, item.quantity + delta) }); loadStock() }
-    catch { notify('Unable to update stock.', 'error') }
-  }
-
-  const handleRemoveStock = async id => {
-    try { await deleteStock(id); notify('Stock item deleted.', 'info'); loadStock() }
-    catch { notify('Unable to delete stock item.', 'error') }
+      await deleteRating(mealId)
+      notify('Your review has been deleted.', 'success')
+      loadMeals()
+    } catch (err) {
+      notify('Unable to delete review.', 'error')
+      console.error(err)
+    }
   }
 
   const isStaff = user.role === 'teacher'
+
+  const weeklyReviewStats = meals.reduce((acc, meal) => {
+    const reviews = meal.ratings || []
+    return {
+      reviewCount: acc.reviewCount + reviews.length,
+      scoreTotal: acc.scoreTotal + reviews.reduce((sum, r) => sum + (r.score || 0), 0)
+    }
+  }, { reviewCount: 0, scoreTotal: 0 })
+
+  const weeklyAverageRating = weeklyReviewStats.reviewCount
+    ? Number((weeklyReviewStats.scoreTotal / weeklyReviewStats.reviewCount).toFixed(1))
+    : 0
 
   return (
     <div className="container py-5">
@@ -185,7 +176,7 @@ export default function MealMonitoring() {
         <p>
           {user.role === 'admin'
             ? 'Review and manage student complaints regarding the mid-day meal service.'
-            : 'Review menus, rate daily quality, and manage ingredients inventory stock.'}
+            : 'Review menus and rate daily quality.'}
         </p>
       </div>
 
@@ -278,13 +269,39 @@ export default function MealMonitoring() {
               <p style={{ fontSize: '0.9rem' }}>No meal complaints recorded yet.</p>
             </div>
           )}
+
+          {meals.some(meal => meal.ratings?.some(r => (r.photos || []).length > 0)) && (
+            <div className="mt-5">
+              <div className="d-flex align-items-center gap-2 mb-4">
+                <UtensilsCrossed size={16} color="var(--brand-primary-light)" />
+                <h5 style={{ fontWeight: 700, margin: 0 }}>Meal Review Photos</h5>
+              </div>
+              <div className="row g-3">
+                {meals.flatMap(meal => (
+                  meal.ratings?.flatMap((rating, ridx) => (
+                    (rating.photos || []).map((photo, pidx) => (
+                      <div key={`${meal._id}-${ridx}-${pidx}`} className="col-6 col-md-3">
+                        <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                          <img src={getUploadUrl(photo)} alt="Meal review" style={{ width: '100%', height: 150, objectFit: 'cover' }} />
+                          <div style={{ padding: '0.75rem', background: 'var(--surface)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            <div style={{ fontWeight: 700, marginBottom: 4 }}>{meal.menuName || new Date(meal.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+                            <div>{rating.comment || 'Review photo'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ))
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <>
           {/* Staff — Publish Menu & Count */}
           {isStaff && (
             <div className="row g-4 mb-4">
-              <div className="col-lg-7 animate-fade-up delay-1">
+              <div className="col-lg-12 animate-fade-up delay-1">
                 <div className="eb-card p-4 h-100">
                   <div className="d-flex align-items-center gap-2 mb-3">
                     <ClipboardList size={16} color="var(--brand-primary-light)" />
@@ -309,99 +326,6 @@ export default function MealMonitoring() {
                   </form>
                 </div>
               </div>
-              <div className="col-lg-5 animate-fade-up delay-2">
-                <div className="eb-card p-4 h-100">
-                  <div className="d-flex align-items-center gap-2 mb-3">
-                    <CheckCircle2 size={16} color="var(--brand-primary-light)" />
-                    <h5 style={{ fontWeight: 700, margin: 0 }}>Update Served Count</h5>
-                  </div>
-                  <form onSubmit={submitCount} className="row g-3">
-                    <div className="col-12">
-                      <label className="form-label">Date</label>
-                      <input type="date" className="form-control" value={countDate} onChange={e => setCountDate(e.target.value)} required />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label">Total Students Served</label>
-                      <input type="number" className="form-control" placeholder="0" value={numberServed} onChange={e => setNumberServed(e.target.value)} required min="0" />
-                    </div>
-                    <div className="col-12">
-                      <button className="eb-btn-primary btn w-100">Update Count</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Staff — Stock */}
-          {isStaff && (
-            <div className="eb-card p-4 mb-4 animate-fade-up">
-              <div className="d-flex align-items-center gap-2 mb-3">
-                <RotateCcw size={16} color="var(--brand-primary-light)" />
-                <h5 style={{ fontWeight: 700, margin: 0 }}>Food Stock & Ingredients Inventory</h5>
-              </div>
-              <div className="row g-4">
-                <div className="col-lg-4">
-                  <div style={{ background: 'var(--surface-1)', borderRadius: 12, padding: '1.25rem', border: '1px solid var(--border)' }}>
-                    <h6 style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '0.9rem' }}>Add Stock Item</h6>
-                    <form onSubmit={submitStock} className="row g-2">
-                      <div className="col-12">
-                        <input className="form-control form-control-sm" placeholder="Ingredient (e.g. Rice)" value={newItemName} onChange={e => setNewItemName(e.target.value)} required />
-                      </div>
-                      <div className="col-7">
-                        <input type="number" className="form-control form-control-sm" placeholder="Qty" value={newQuantity} onChange={e => setNewQuantity(e.target.value)} required min="0" />
-                      </div>
-                      <div className="col-5">
-                        <select className="form-select form-select-sm" value={newUnit} onChange={e => setNewUnit(e.target.value)}>
-                          <option value="kg">kg</option>
-                          <option value="liters">liters</option>
-                          <option value="bags">bags</option>
-                          <option value="units">units</option>
-                        </select>
-                      </div>
-                      <div className="col-12">
-                        <button className="eb-btn-primary btn btn-sm w-100">+ Add Stock</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-                <div className="col-lg-8">
-                  {stocks.length ? (
-                    <div className="table-responsive">
-                      <table className="eb-table table table-borderless mb-0">
-                        <thead><tr><th>Item</th><th>Quantity</th><th>Unit</th><th>Adjust</th><th></th></tr></thead>
-                        <tbody>
-                          {stocks.map(item => (
-                            <tr key={item._id}>
-                              <td style={{ fontWeight: 600 }}>{item.itemName}</td>
-                              <td><span className={stockLevel(item.quantity)}>{item.quantity}</span></td>
-                              <td style={{ color: 'var(--text-muted)' }}>{item.unit}</td>
-                              <td>
-                                <div className="d-flex gap-1">
-                                  {[10, 1, -1, -10].map(d => (
-                                    <button key={d} className="btn btn-sm py-0 px-2"
-                                      style={{ fontSize: '0.75rem', border: '1px solid var(--border)', borderRadius: 6, lineHeight: 1.8 }}
-                                      onClick={() => handleAdjustStock(item._id, d)}
-                                      disabled={d < 0 && item.quantity + d < 0}>
-                                      {d > 0 ? `+${d}` : d}
-                                    </button>
-                                  ))}
-                                </div>
-                              </td>
-                              <td>
-                                <button className="btn btn-sm btn-outline-danger py-0 px-2" style={{ borderRadius: 6, fontSize: '0.78rem' }}
-                                  onClick={() => handleRemoveStock(item._id)}>
-                                  Delete
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : <p style={{ color: 'var(--text-muted)', marginTop: '0.75rem', fontSize: '0.875rem' }}>No stock items added yet.</p>}
-                </div>
-              </div>
             </div>
           )}
 
@@ -413,25 +337,48 @@ export default function MealMonitoring() {
                   <UtensilsCrossed size={16} color="var(--brand-primary-light)" />
                   <h5 style={{ fontWeight: 700, margin: 0 }}>Weekly Meal Menu</h5>
                 </div>
+                <div className="d-flex flex-wrap align-items-center gap-3 mb-4" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontWeight: 600 }}>
+                    Total reviews: {weeklyReviewStats.reviewCount}
+                  </div>
+                  <div style={{ fontWeight: 600 }}>
+                    Average rating: {weeklyAverageRating} / 5
+                  </div>
+                </div>
                 {meals.length ? (
                   <div className="d-flex flex-column gap-3">
                     {meals.map(meal => (
                       <div key={meal._id} style={{ background: 'var(--surface-1)', borderRadius: 12, padding: '1rem 1.25rem', border: '1px solid var(--border)' }}>
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div>
-                            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{meal.menuName || 'Meal Plan'}</span>
-                            <span className="ms-2 eb-badge eb-badge-progress" style={{ fontSize: '0.7rem' }}>
-                              {new Date(meal.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                            </span>
-                          </div>
-                          <div className="d-flex align-items-center gap-1">
-                            <Star size={13} color="#f59e0b" fill="#f59e0b" />
-                            <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{meal.averageRating || 0}</span>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>({meal.ratings?.length || 0})</span>
-                          </div>
+                        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{meal.menuName || 'Meal Plan'}</span>
+                          {meal.ratings?.length > 0 && (
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', display: 'flex', gap: 10, alignItems: 'center' }}>
+                              <span>{meal.ratings.length} review{meal.ratings.length !== 1 ? 's' : ''}</span>
+                              <span>Avg {meal.averageRating || 0}/5</span>
+                            </div>
+                          )}
                         </div>
                         {meal.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '0.5rem', marginBottom: '0.3rem' }}>{meal.description}</p>}
-                        <small style={{ color: 'var(--text-muted)' }}>Served: <strong>{meal.numberServed || 0}</strong> students</small>
+                        {user.role === 'student' && meal.ratings?.length > 0 && (() => {
+                          const ownReview = meal.ratings.find(r => r.user?._id === user._id || r.user === user._id)
+                          return ownReview ? (
+                            <div className="d-flex align-items-center justify-content-between gap-3 mt-3">
+                              <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                                Your review: {ownReview.comment || `${ownReview.score}/5`}
+                              </div>
+                              <button type="button" className="eb-btn-outline btn btn-sm" onClick={() => deleteReview(meal._id)}>
+                                Delete review
+                              </button>
+                            </div>
+                          ) : null
+                        })()}
+                        {meal.ratings?.length > 0 && (
+                          <div className="d-flex flex-wrap gap-2 mt-3">
+                            {meal.ratings.flatMap(r => r.photos || []).slice(0, 4).map((photo, idx) => (
+                              <img key={idx} src={getUploadUrl(photo)} alt={`meal-rating-${idx}`} style={{ width: 96, height: 72, objectFit: 'cover', borderRadius: 12, border: '1px solid var(--border)' }} />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -476,6 +423,26 @@ export default function MealMonitoring() {
                       <label className="form-label">Comments (optional)</label>
                       <textarea className="form-control" rows="3" value={comment} onChange={e => setComment(e.target.value)} placeholder="Taste, quantity, freshness…" />
                     </div>
+                    <div className="col-12">
+                      <label className="form-label">Upload Meal Photos (optional)</label>
+                      <input type="file" className="form-control" accept="image/*" multiple onChange={e => setRatingPhotos(Array.from(e.target.files).slice(0, 5))} />
+                      <small className="form-text text-muted">Upload up to 5 images showing meal quality, hygiene, or serving size.</small>
+                    </div>
+                    {ratingPhotos.length > 0 && (
+                      <div className="col-12">
+                        <div className="d-flex flex-wrap gap-2">
+                          {ratingPhotos.map((photo, idx) => (
+                            <div key={idx} style={{ width: 80, height: 80, position: 'relative' }}>
+                              <img src={URL.createObjectURL(photo)} alt="meal preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }} />
+                              <button type="button" onClick={() => setRatingPhotos(prev => prev.filter((_, i) => i !== idx))}
+                                style={{ position: 'absolute', top: 4, right: 4, border: 'none', background: 'rgba(0,0,0,.55)', color: 'white', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer' }}>
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="col-12">
                       <button className="eb-btn-primary btn w-100" style={{ justifyContent: 'center' }}>
                         Submit Feedback

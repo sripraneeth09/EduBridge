@@ -1,5 +1,4 @@
 const Meal = require('../models/Meal');
-const MealStock = require('../models/MealStock');
 const mongoose = require('mongoose');
 
 const computeAverage = (ratings = []) => {
@@ -98,6 +97,10 @@ exports.updateCount = async (req, res) => {
 exports.rateMeal = async (req, res) => {
   try{
     const { mealId, score, comment } = req.body;
+    const photos = req.files && req.files.length
+      ? req.files.map(file => `/uploads/${file.filename}`)
+      : [];
+
     let meal;
     if (typeof mealId === 'string' && mealId.startsWith('default-')) {
       const dateStr = mealId.replace('default-', '');
@@ -120,15 +123,44 @@ exports.rateMeal = async (req, res) => {
     if(existing){
       existing.score = score;
       existing.comment = comment;
+      existing.photos = photos.length ? photos : (existing.photos || []);
       existing.createdAt = new Date();
     } else {
-      meal.ratings.push({ user: req.user._id, score, comment });
+      meal.ratings.push({ user: req.user._id, score, comment, photos });
     }
 
     await meal.save();
     const averageRating = computeAverage(meal.ratings);
     res.json({ meal, averageRating });
   }catch(err){ res.status(500).json({ message: err.message }); }
+};
+
+exports.deleteRating = async (req, res) => {
+  try {
+    const { mealId } = req.params;
+    let meal;
+
+    if (typeof mealId === 'string' && mealId.startsWith('default-')) {
+      const dateStr = mealId.replace('default-', '');
+      const dateVal = new Date(dateStr);
+      meal = await Meal.findOne({ date: dateVal });
+    } else if (mongoose.Types.ObjectId.isValid(mealId)) {
+      meal = await Meal.findById(mealId);
+    }
+
+    if (!meal) {
+      return res.status(404).json({ message: 'Meal not found' });
+    }
+
+    const ratingIndex = meal.ratings.findIndex(r => r.user?.toString() === req.user._id.toString());
+    if (ratingIndex === -1) {
+      return res.status(404).json({ message: 'Review not found' });
+    }
+
+    meal.ratings.splice(ratingIndex, 1);
+    await meal.save();
+    res.json({ message: 'Review deleted' });
+  } catch(err) { res.status(500).json({ message: err.message }); }
 };
 
 exports.listMeals = async (req, res) => {
@@ -162,6 +194,7 @@ exports.listMeals = async (req, res) => {
           user: r.user,
           score: r.score,
           comment: r.comment,
+          photos: r.photos || [],
           createdAt: r.createdAt
         }))
       };
@@ -171,33 +204,3 @@ exports.listMeals = async (req, res) => {
   }catch(err){ res.status(500).json({ message: err.message }); }
 };
 
-exports.createStock = async (req, res) => {
-  try{
-    const { itemName, quantity, unit } = req.body;
-    const stock = await MealStock.create({ itemName, quantity, unit });
-    res.status(201).json(stock);
-  }catch(err){ res.status(500).json({ message: err.message }); }
-};
-
-exports.updateStock = async (req, res) => {
-  try{
-    const { id } = req.params;
-    const updates = req.body;
-    const stock = await MealStock.findByIdAndUpdate(id, updates, { new: true });
-    res.json(stock);
-  }catch(err){ res.status(500).json({ message: err.message }); }
-};
-
-exports.listStock = async (req, res) => {
-  try{
-    const stocks = await MealStock.find().sort({ itemName: 1 });
-    res.json(stocks);
-  }catch(err){ res.status(500).json({ message: err.message }); }
-};
-
-exports.deleteStock = async (req, res) => {
-  try{
-    await MealStock.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Stock item deleted' });
-  }catch(err){ res.status(500).json({ message: err.message }); }
-};

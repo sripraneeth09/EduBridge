@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import api from '../services/api'
+import api, { getUploadUrl } from '../services/api'
 import {
   Wrench, MapPin, AlertTriangle, CheckCircle2, Clock,
   UserCheck, ChevronDown, Inbox, Send, CircleDot
@@ -32,6 +32,7 @@ export default function Infrastructure() {
   const [description, setDescription]   = useState('')
   const [location, setLocation]         = useState('')
   const [priority, setPriority]         = useState('low')
+  const [photos, setPhotos]             = useState([])
   const [issues, setIssues]             = useState([])
   const [maintenanceStaff, setMaintenanceStaff] = useState([])
   const [message, setMessage]           = useState('')
@@ -64,8 +65,17 @@ export default function Infrastructure() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await api.post('/infrastructure', { title, description, location, priority })
-      setTitle(''); setDescription(''); setLocation(''); setPriority('low')
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('description', description)
+      formData.append('location', location)
+      formData.append('priority', priority)
+      photos.forEach(photo => formData.append('photos', photo))
+
+      await api.post('/infrastructure', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setTitle(''); setDescription(''); setLocation(''); setPriority('low'); setPhotos([])
       notify('Issue reported successfully.', 'success')
       loadIssues()
     } catch { notify('Error reporting infrastructure issue.', 'error') }
@@ -158,6 +168,26 @@ export default function Infrastructure() {
                     <option value="critical">Critical — Safety hazard</option>
                   </select>
                 </div>
+                <div className="mb-3">
+                  <label className="form-label">Upload Photos (optional)</label>
+                  <input type="file" className="form-control" accept="image/*" multiple onChange={e => setPhotos(Array.from(e.target.files).slice(0, 5))} />
+                  <small className="form-text text-muted">Upload up to 5 images to show the damage or issue clearly.</small>
+                </div>
+                {photos.length > 0 && (
+                  <div className="mb-3">
+                    <div className="d-flex flex-wrap gap-2">
+                      {photos.map((photo, idx) => (
+                        <div key={idx} style={{ width: 84, height: 84, position: 'relative' }}>
+                          <img src={URL.createObjectURL(photo)} alt="upload preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }} />
+                          <button type="button" onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
+                            style={{ position: 'absolute', top: 4, right: 4, border: 'none', background: 'rgba(0,0,0,.55)', color: 'white', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer' }}>
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="mb-4">
                   <label className="form-label">Description</label>
                   <textarea className="form-control" rows={3}
@@ -230,6 +260,13 @@ export default function Infrastructure() {
                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 0 }}>
                               {issue.description}
                             </p>
+                          )}
+                          {issue.photos?.length > 0 && (
+                            <div className="d-flex flex-wrap gap-2 mt-3">
+                              {issue.photos.map((photo, idx) => (
+                                <img key={idx} src={getUploadUrl(photo)} alt={`issue-${idx}`} style={{ width: 110, height: 84, objectFit: 'cover', borderRadius: 12, border: '1px solid var(--border)' }} />
+                              ))}
+                            </div>
                           )}
                         </div>
 

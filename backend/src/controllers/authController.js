@@ -65,3 +65,46 @@ exports.me = async (req, res) => {
   if(!req.user) return res.status(401).json({ message: 'Not authenticated' });
   res.json({ user: req.user });
 };
+
+// Parent login using parent's mobile (parentPhone) and child's DOB as password
+exports.parentLogin = async (req, res) => {
+  try{
+    const { mobile, password } = req.body;
+    if(!mobile || !password) return res.status(400).json({ message: 'mobile and password are required' });
+    const Student = require('../models/Student');
+    const student = await Student.findOne({ parentPhone: { $regex: `^${mobile.toString().trim()}$`, $options: 'i' } });
+    if(!student) return res.status(400).json({ message: 'Invalid credentials' });
+
+    // Normalize DOB to compare. Expecting parent to enter DOB as DD/MM/YYYY (common format).
+    const parseDob = (s) => {
+      if(!s) return null;
+      const parts = s.toString().trim().split(/[^0-9]+/).filter(Boolean);
+      if(parts.length !== 3) return null;
+      // assume DD/MM/YYYY
+      const [d, m, y] = parts.map(p => parseInt(p,10));
+      if(!d || !m || !y) return null;
+      return new Date(y, m-1, d);
+    }
+
+    const provided = parseDob(password);
+    const dob = student.dateOfBirth ? new Date(student.dateOfBirth) : null;
+    if(!dob || !provided || dob.setHours(0,0,0,0) !== provided.setHours(0,0,0,0)){
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign({ role: 'parent', studentId: student._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.json({
+      token,
+      user: {
+        role: 'parent',
+        name: student.parentName || student.name || 'Parent',
+        studentId: student._id,
+        studentName: student.name,
+        registrationNo: student.registrationNo,
+        parentName: student.parentName,
+        parentPhone: student.parentPhone
+      }
+    });
+  }catch(err){ res.status(500).json({ message: err.message }); }
+};

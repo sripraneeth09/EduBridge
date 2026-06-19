@@ -61,15 +61,16 @@ function QuickLink({ to, icon: Icon, label, iconColor = 'var(--brand-primary-lig
 }
 
 export default function Dashboard() {
-  const user = JSON.parse(localStorage.getItem('user') || 'null') || {}
-  const role = user?.role || 'guest'
+  const [storedUser, setStoredUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null') || {})
+  const role = storedUser?.role || 'guest'
   const ri = roleInfo[role] || { color: 'eb-card-indigo', label: 'User' }
 
   const [summary, setSummary]                   = useState(null)
   const [loadingSummary, setLoadingSummary]     = useState(false)
   const [attendanceRecords, setAttendanceRecords] = useState([])
   const [meals, setMeals]                       = useState([])
-  const [childId, setChildId]                   = useState('')
+  // Default child lookup should show registration number only
+  const [childId, setChildId]                   = useState(storedUser?.role === 'parent' ? (storedUser.registrationNo || '') : '')
   const [childRecords, setChildRecords]         = useState([])
   const [loadingChild, setLoadingChild]         = useState(false)
 
@@ -79,7 +80,7 @@ export default function Dashboard() {
       api.get('/admin/summary').then(r => setSummary(r.data)).catch(() => {}).finally(() => setLoadingSummary(false))
     }
     if (role === 'student') {
-      getAttendanceByStudent(user._id || user.id).then(r => setAttendanceRecords(r.data)).catch(() => {})
+      getAttendanceByStudent(storedUser._id || storedUser.id).then(r => setAttendanceRecords(r.data)).catch(() => {})
       listMeals().then(r => setMeals(r.data)).catch(() => {})
     }
   }, [role])
@@ -93,6 +94,66 @@ export default function Dashboard() {
       .finally(() => setLoadingChild(false))
   }
 
+  // Auto-fetch for parent users and default to the child's registration number
+  useEffect(() => {
+    const savedUser = JSON.parse(localStorage.getItem('user') || 'null') || {}
+    setStoredUser(savedUser)
+
+    const onStorage = (e) => {
+      if (e.key === 'user') {
+        try {
+          setStoredUser(JSON.parse(e.newValue || 'null') || {})
+        } catch (_) { setStoredUser({}) }
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
+  useEffect(() => {
+    if (role !== 'parent' || !storedUser) return
+
+    const resolveRegistrationNo = async () => {
+      if (storedUser.registrationNo) {
+        setChildId(storedUser.registrationNo)
+        return
+      }
+
+      if (storedUser.studentId && /^[0-9a-fA-F]{24}$/.test(storedUser.studentId)) {
+        try {
+          const res = await api.get(`/school-management/students?userId=${storedUser.studentId}`)
+          if (res.data && res.data.length && res.data[0].registrationNo) {
+            const registrationNo = res.data[0].registrationNo
+            setChildId(registrationNo)
+            localStorage.setItem('user', JSON.stringify({ ...storedUser, registrationNo }))
+            setStoredUser({ ...storedUser, registrationNo })
+            return
+          }
+        } catch (_){
+          // ignore resolution failure
+        }
+      }
+    }
+
+    resolveRegistrationNo()
+  }, [role, storedUser])
+
+  // Defensive render: show message instead of blank if no user
+  if (!storedUser || Object.keys(storedUser).length === 0) {
+    console.debug('Dashboard: no stored user available', { storedUser })
+    return (
+      <div className="container py-5">
+        <p className="text-muted">No user session found. Please login to view your dashboard.</p>
+      </div>
+    )
+  }
+
+  useEffect(() => {
+    if (role === 'parent' && childId) {
+      fetchChildAttendance()
+    }
+  }, [role, childId])
+
   const attendanceStats = records => {
     const present = records.filter(r => r.status === 'present').length
     const absent  = records.filter(r => r.status === 'absent').length
@@ -105,8 +166,9 @@ export default function Dashboard() {
   const cStats     = attendanceStats(childRecords)
   const pct        = sStats.total ? Math.round((sStats.present / sStats.total) * 100) : 0
 
-  const initials = (user?.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  const initials = (storedUser?.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
+  console.debug('Dashboard render', { role, storedUser })
   return (
     <div className="container py-5">
       {/* ── Header ── */}
@@ -116,7 +178,7 @@ export default function Dashboard() {
             Dashboard
           </p>
           <h2 style={{ fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '0.25rem' }}>
-            Welcome back, {user?.name?.split(' ')[0] || 'User'}
+            Welcome back, {storedUser?.name?.split(' ')[0] || 'User'}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
             Here's what's happening at your school today.
@@ -127,7 +189,7 @@ export default function Dashboard() {
             {initials}
           </div>
           <div className="d-none d-md-block">
-            <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{user?.name}</div>
+            <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{storedUser?.name}</div>
             <span className={`eb-badge eb-badge-${role}`}>{ri.label}</span>
           </div>
         </div>
@@ -153,10 +215,9 @@ export default function Dashboard() {
                 <StatCard color="eb-card-emerald" icon={CalendarCheck}    iconColor="#059669" iconBg="rgba(16,185,129,.12)"  value={summary?.attendanceToday} label="Attendance Today" delay={4} />
               </div>
               <div className="row g-3 mb-5">
-                <StatCard color="eb-card-amber"  icon={UtensilsCrossed}       iconColor="#d97706" iconBg="rgba(245,158,11,.12)"  value={summary?.mealsServed}    label="Meals Served"     delay={1} />
-                <StatCard color="eb-card-rose"   icon={MessageSquareWarning}  iconColor="#e11d48" iconBg="rgba(244,63,94,.12)"   value={summary?.openComplaints} label="Open Complaints"  delay={2} />
-                <StatCard color="eb-card-teal"   icon={Wrench}                iconColor="#0d9488" iconBg="rgba(13,148,136,.12)"  value={summary?.openIssues}     label="Open Issues"      delay={3} />
-                <StatCard color="eb-card-sky"    icon={Search}                iconColor="#0369a1" iconBg="rgba(14,165,233,.12)"  value={summary?.lostCount}      label="Lost Items"       delay={4} />
+                <StatCard color="eb-card-rose"   icon={MessageSquareWarning}  iconColor="#e11d48" iconBg="rgba(244,63,94,.12)"   value={summary?.openComplaints} label="Open Complaints"  delay={1} />
+                <StatCard color="eb-card-teal"   icon={Wrench}                iconColor="#0d9488" iconBg="rgba(13,148,136,.12)"  value={summary?.openIssues}     label="Open Issues"      delay={2} />
+                <StatCard color="eb-card-sky"    icon={Search}                iconColor="#0369a1" iconBg="rgba(14,165,233,.12)"  value={summary?.lostCount}      label="Lost Items"       delay={3} />
               </div>
             </>
           )}
@@ -370,12 +431,12 @@ export default function Dashboard() {
                   <h5 style={{ fontWeight: 700, margin: 0 }}>Child Attendance Lookup</h5>
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                  Enter your child's student ID to view their attendance record.
+                  Enter your child's registration number to view their attendance record.
                 </p>
                 <div className="input-group">
-                  <input
+                    <input
                     value={childId} onChange={e => setChildId(e.target.value)}
-                    placeholder="Student ID"
+                    placeholder="Registration No"
                     className="form-control"
                   />
                   <button className="eb-btn-primary btn" onClick={fetchChildAttendance} disabled={loadingChild}>

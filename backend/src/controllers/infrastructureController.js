@@ -2,8 +2,14 @@ const Issue = require('../models/InfrastructureIssue');
 
 exports.reportIssue = async (req, res) => {
   try{
-    const data = req.body;
-    data.reportedBy = req.user._id;
+    const data = {
+      ...req.body,
+      reportedBy: req.user._id,
+      photos: []
+    };
+    if (req.files && req.files.length) {
+      data.photos = req.files.map(file => `/uploads/${file.filename}`);
+    }
     const issue = await Issue.create(data);
     res.status(201).json(issue);
   }catch(err){ res.status(500).json({ message: err.message }); }

@@ -27,7 +27,7 @@ export default function Navbar() {
     { icon: UserCog,            label: 'Users',          to: '/admin/users' },
     null, // divider
     { icon: CalendarCheck,      label: 'Attendance',     to: '/attendance' },
-    { icon: UtensilsCrossed,    label: 'Meals & Stock',  to: '/meals' },
+    { icon: UtensilsCrossed,    label: 'Meal Monitoring',  to: '/meals' },
     { icon: MessageSquareWarning,label:'Complaints',     to: '/complaints' },
     { icon: Wrench,             label: 'Infrastructure', to: '/infrastructure' },
     { icon: Search,             label: 'Lost & Found',   to: '/lostfound' },
@@ -47,7 +47,9 @@ export default function Navbar() {
   ]
 
   const parentLinks = [
-    { icon: Baby,                label: "Child's Attendance", to: '/dashboard' },
+    { icon: Baby,                label: "Child's Dashboard", to: '/parent/dashboard' },
+    { icon: CalendarCheck,       label: "Attendance", to: '/parent/attendance' },
+    { icon: BookOpen,            label: 'Exams', to: '/parent/exams' },
     { icon: MessageSquareWarning,label: 'Complaints & Suggestions', to: '/complaints' },
   ]
 

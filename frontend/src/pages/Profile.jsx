@@ -9,7 +9,7 @@ const roleConfig = {
   admin:       { icon: ShieldCheck,   bg: 'role-admin',       label: 'Administrator', color: '#5b21b6' },
   teacher:     { icon: Users,         bg: 'role-teacher',     label: 'Teacher',       color: '#be185d' },
   student:     { icon: GraduationCap, bg: 'role-student',     label: 'Student',       color: '#0369a1' },
-  parent:      { icon: Baby,          bg: 'role-parent',      label: 'Parent',        color: '#059669' },
+  parent:      { icon: Users,         bg: 'role-parent',      label: 'Parent',        color: '#059669' },
   maintenance: { icon: Wrench,        bg: 'role-maintenance', label: 'Maintenance',   color: '#374151' },
 }
 
@@ -67,7 +67,12 @@ export default function Profile() {
   }
 
   const rc = roleConfig[user.role] || { icon: User, bg: 'role-admin', label: 'User', color: '#64748b' }
-  const initials = (user.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  // For parent accounts, use parentName and parentPhone (frontend stores these on parent login)
+  const isParent = user.role === 'parent'
+  const displayName = isParent ? (user.parentName || user.name || user.studentName || user.student?.name || 'Parent') : (user.name || 'User')
+  const displaySub = isParent ? user.parentPhone : user.email
+  const initials = (!isParent ? (displayName || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : null)
+  const AvatarIcon = rc.icon
   const joinedDate = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
     : null
@@ -87,10 +92,15 @@ export default function Profile() {
           {/* Profile header card */}
           <div className="eb-card p-4 mb-4 animate-fade-up">
             <div className="d-flex align-items-center gap-4 flex-wrap">
-              <div className={`eb-avatar ${rc.bg}`}>{initials}</div>
+              <div className={`eb-avatar ${rc.bg}`}>
+                {isParent
+                  ? <AvatarIcon size={20} color="white" />
+                  : initials
+                }
+              </div>
               <div className="flex-grow-1">
-                <h4 style={{ fontWeight: 800, marginBottom: '0.2rem', letterSpacing: '-0.3px' }}>{user.name}</h4>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '0.75rem', fontSize: '0.9rem' }}>{user.email}</p>
+                <h4 style={{ fontWeight: 800, marginBottom: '0.2rem', letterSpacing: '-0.3px' }}>{displayName}</h4>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '0.75rem', fontSize: '0.9rem' }}>{displaySub}</p>
                 <div className="d-flex align-items-center gap-2">
                   <div style={{ width: 28, height: 28, borderRadius: 7, background: `${rc.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <rc.icon size={14} color={rc.color} />
@@ -117,8 +127,8 @@ export default function Profile() {
                   Personal Information
                 </div>
                 <div style={{ marginTop: '0.5rem' }}>
-                  <DetailRow icon={User}  label="Full Name" value={user.name} />
-                  <DetailRow icon={Mail}  label="Email"     value={user.email} />
+                  <DetailRow icon={User}  label="Full Name" value={isParent ? displayName : user.name} />
+                  <DetailRow icon={Mail}  label={isParent ? "Mobile" : "Email"}     value={isParent ? displaySub : user.email} />
                   <DetailRow icon={rc.icon} label="Role"   value={rc.label} />
                 </div>
               </div>
@@ -130,8 +140,8 @@ export default function Profile() {
                   Account Details
                 </div>
                 <div style={{ marginTop: '0.5rem' }}>
-                  {user.registrationNo && (
-                    <DetailRow icon={Hash} label="Registration No" value={user.registrationNo} mono />
+                  {(user.registrationNo || user.student?.registrationNo) && (
+                    <DetailRow icon={Hash} label="Registration No" value={user.registrationNo || user.student?.registrationNo} mono />
                   )}
                   <DetailRow icon={Hash}     label="User ID"  value={user._id || user.id || '—'} mono />
                   {joinedDate && (

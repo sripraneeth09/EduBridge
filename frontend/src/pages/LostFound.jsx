@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import api from '../services/api'
+import api, { getUploadUrl } from '../services/api'
 import { Search, PackageX, PackageCheck, MapPin, Clock, Trash2, CheckCircle2, Zap } from 'lucide-react'
 
 const lostStatusBadge  = s => s === 'lost'  ? 'eb-badge-absent'  : s === 'claimed' ? 'eb-badge-review' : 'eb-badge-present'
@@ -18,9 +18,11 @@ export default function LostFound() {
   const user = JSON.parse(localStorage.getItem('user') || 'null') || {}
   const [lostName, setLostName]   = useState('')
   const [lostDesc, setLostDesc]   = useState('')
+  const [lostImage, setLostImage] = useState(null)
   const [foundName, setFoundName] = useState('')
   const [foundDesc, setFoundDesc] = useState('')
   const [foundLoc, setFoundLoc]   = useState('')
+  const [foundImage, setFoundImage] = useState(null)
   const [lostItems, setLostItems]   = useState([])
   const [foundItems, setFoundItems] = useState([])
   const [message, setMessage]     = useState('')
@@ -42,8 +44,14 @@ export default function LostFound() {
   const submitLost = async e => {
     e.preventDefault()
     try {
-      await api.post('/lostfound/lost', { itemName: lostName, description: lostDesc })
-      setLostName(''); setLostDesc('')
+      const formData = new FormData()
+      formData.append('itemName', lostName)
+      formData.append('description', lostDesc)
+      if (lostImage) formData.append('image', lostImage)
+      await api.post('/lostfound/lost', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setLostName(''); setLostDesc(''); setLostImage(null)
       notify('Lost item reported successfully.', 'success'); loadData()
     } catch { notify('Error reporting lost item.', 'error') }
   }
@@ -51,8 +59,15 @@ export default function LostFound() {
   const submitFound = async e => {
     e.preventDefault()
     try {
-      await api.post('/lostfound/found', { itemName: foundName, description: foundDesc, locationFound: foundLoc })
-      setFoundName(''); setFoundDesc(''); setFoundLoc('')
+      const formData = new FormData()
+      formData.append('itemName', foundName)
+      formData.append('description', foundDesc)
+      formData.append('locationFound', foundLoc)
+      if (foundImage) formData.append('image', foundImage)
+      await api.post('/lostfound/found', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setFoundName(''); setFoundDesc(''); setFoundLoc(''); setFoundImage(null)
       notify('Found item reported successfully.', 'success'); loadData()
     } catch { notify('Error reporting found item.', 'error') }
   }
@@ -127,6 +142,16 @@ export default function LostFound() {
                   placeholder="Brand, color, markings, where it was lost…"
                   value={lostDesc} onChange={e => setLostDesc(e.target.value)} required />
               </div>
+              <div className="mb-3">
+                <label className="form-label">Upload Photo (optional)</label>
+                <input type="file" className="form-control" accept="image/*"
+                  onChange={e => setLostImage(e.target.files[0] || null)} />
+                {lostImage && (
+                  <div className="mt-3" style={{ width: 96, height: 96, overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <img src={URL.createObjectURL(lostImage)} alt="lost preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+              </div>
               <button className="eb-btn-primary btn w-100" style={{ justifyContent: 'center' }}>
                 <PackageX size={14} />Submit Lost Report
               </button>
@@ -153,6 +178,16 @@ export default function LostFound() {
                     required style={{ paddingLeft: '2.25rem' }} />
                   <MapPin size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Upload Photo (optional)</label>
+                <input type="file" className="form-control" accept="image/*"
+                  onChange={e => setFoundImage(e.target.files[0] || null)} />
+                {foundImage && (
+                  <div className="mt-3" style={{ width: 96, height: 96, overflow: 'hidden', borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <img src={URL.createObjectURL(foundImage)} alt="found preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
               </div>
               <div className="mb-3">
                 <label className="form-label">Description</label>
@@ -229,6 +264,11 @@ export default function LostFound() {
                             · {item.reportedBy?.name || 'Staff'}
                           </div>
                           {item.description && <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginTop: 4, marginBottom: 0 }}>{item.description}</p>}
+                          {item.image && (
+                            <div className="mt-3" style={{ width: 100, height: 100, overflow: 'hidden', borderRadius: 14, border: '1px solid var(--border)' }}>
+                              <img src={getUploadUrl(item.image)} alt="lost item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          )}
                         </div>
                         <div className="d-flex flex-column align-items-end gap-2 ms-2" style={{ flexShrink: 0 }}>
                           <span className={`eb-badge ${lostStatusBadge(item.status)}`}>{item.status}</span>
@@ -279,6 +319,11 @@ export default function LostFound() {
                             · {new Date(item.date || item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                           </div>
                           {item.description && <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginTop: 4, marginBottom: 0 }}>{item.description}</p>}
+                          {item.image && (
+                            <div className="mt-3" style={{ width: 100, height: 100, overflow: 'hidden', borderRadius: 14, border: '1px solid var(--border)' }}>
+                              <img src={getUploadUrl(item.image)} alt="found item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          )}
                         </div>
                         <div className="d-flex flex-column align-items-end gap-2 ms-2" style={{ flexShrink: 0 }}>
                           <span className={`eb-badge ${foundStatusBadge(item.status)}`}>{item.status}</span>

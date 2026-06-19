@@ -3,7 +3,10 @@ const FoundItem = require('../models/FoundItem');
 
 exports.reportLost = async (req, res) => {
   try{
-    const data = req.body; data.reportedBy = req.user._id;
+    const data = { ...req.body, reportedBy: req.user._id };
+    if (req.file) {
+      data.image = `/uploads/${req.file.filename}`;
+    }
     const item = await LostItem.create(data);
     res.status(201).json(item);
   }catch(err){ res.status(500).json({ message: err.message }); }
@@ -11,7 +14,10 @@ exports.reportLost = async (req, res) => {
 
 exports.reportFound = async (req, res) => {
   try{
-    const data = req.body; data.reportedBy = req.user._id;
+    const data = { ...req.body, reportedBy: req.user._id };
+    if (req.file) {
+      data.image = `/uploads/${req.file.filename}`;
+    }
     const item = await FoundItem.create(data);
     res.status(201).json(item);
   }catch(err){ res.status(500).json({ message: err.message }); }

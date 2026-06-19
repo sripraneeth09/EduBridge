@@ -5,7 +5,6 @@ import {
   Search, Bell, ShieldCheck, BarChart3, Zap, Users, GraduationCap,
   ArrowRight, CheckCircle2, Baby
 } from 'lucide-react'
-import smartSchoolHero from '../smart_school_hero.png'
 
 const modules = [
   { icon: Bell,                 label: 'Notices & Announcements' },
