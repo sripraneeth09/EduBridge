@@ -33,7 +33,7 @@ export default function AdminLogin(){
   return (
     <div className="container py-5">
       <div className="row justify-content-center">
-        <div className="col-md-6">
+        <div className="col-12 col-md-6">
           <h3>Admin Login</h3>
           {err && <div className="eb-alert eb-alert-error"><MessageSquareWarning /> {err}</div>}
           <form onSubmit={submit}>
@@ -44,7 +44,7 @@ export default function AdminLogin(){
             <div className="mb-3">
               <label className="form-label">Password</label>
               <div style={{ position: 'relative' }}>
-                <input type={showPwd ? 'text' : 'password'} className="form-control" value={password} onChange={e=>setPassword(e.target.value)} required style={{ paddingRight: '2.5rem' }} />
+                <input type={showPwd ? 'text' : 'password'} className="form-control" value={password} onChange={e=>setPassword(e.target.value)} required style={{ paddingRight: 'clamp(2rem, 3vw, 2.5rem)' }} />
                 <button type="button" onClick={() => setShowPwd(v=>!v)} style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', border:'none', background:'none' }}>{showPwd ? <EyeOff /> : <Eye />}</button>
               </div>
             </div>

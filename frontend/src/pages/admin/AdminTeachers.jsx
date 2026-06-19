@@ -49,12 +49,12 @@ export default function AdminTeachers(){
         <div className="card p-4 mb-4">
           <h5>Create Teacher</h5>
           <form onSubmit={submitForm} className="row g-3">
-            <div className="col-md-3"><input className="form-control" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
-            <div className="col-md-3"><input type="email" className="form-control" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
-            <div className="col-md-3"><input className="form-control" placeholder="Subject" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} required /></div>
-            <div className="col-md-3"><input className="form-control" placeholder="Contact Number" value={form.contactNumber} onChange={e => setForm({ ...form, contactNumber: e.target.value })} required /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Qualification" value={form.qualification} onChange={e => setForm({ ...form, qualification: e.target.value })} /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Designation" value={form.designation} onChange={e => setForm({ ...form, designation: e.target.value })} /></div>
+            <div className="col-12 col-md-3"><input className="form-control" placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
+            <div className="col-12 col-md-3"><input type="email" className="form-control" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
+            <div className="col-12 col-md-3"><input className="form-control" placeholder="Subject" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} required /></div>
+            <div className="col-12 col-md-3"><input className="form-control" placeholder="Contact Number" value={form.contactNumber} onChange={e => setForm({ ...form, contactNumber: e.target.value })} required /></div>
+            <div className="col-12 col-md-4"><input className="form-control" placeholder="Qualification" value={form.qualification} onChange={e => setForm({ ...form, qualification: e.target.value })} /></div>
+            <div className="col-12 col-md-4"><input className="form-control" placeholder="Designation" value={form.designation} onChange={e => setForm({ ...form, designation: e.target.value })} /></div>
             <div className="col-12"><button className="btn btn-success">Create Teacher</button></div>
           </form>
         </div>

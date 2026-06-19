@@ -157,17 +157,17 @@ export default function AdminStudents(){
         <div className="card p-4 mb-4">
           <h5>{form._id ? 'Edit Student' : 'Create Student'}</h5>
           <form onSubmit={submitForm} className="row g-3">
-            <div className="col-md-4"><input className="form-control" placeholder="Full Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
-            <div className="col-md-4"><input type="email" className="form-control" placeholder="Email (optional)" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Roll Number" value={form.rollNo} onChange={e => setForm({ ...form, rollNo: e.target.value })} required /></div>
-            <div className="col-md-3">
+            <div className="col-12 col-md-4"><input className="form-control" placeholder="Full Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
+            <div className="col-12 col-md-4"><input type="email" className="form-control" placeholder="Email (optional)" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+            <div className="col-12 col-md-4"><input className="form-control" placeholder="Roll Number" value={form.rollNo} onChange={e => setForm({ ...form, rollNo: e.target.value })} required /></div>
+            <div className="col-12 col-md-3">
               <select className="form-select" value={form.className} onChange={e => setForm({ ...form, className: e.target.value })}>
                 <option value="">Select Class</option>
                 {classes.map(c => <option key={c._id} value={c.name}>{`${c.name}`}</option>)}
               </select>
             </div>
-            <div className="col-md-3"><input className="form-control" placeholder="Section" value={form.section} onChange={e => setForm({ ...form, section: e.target.value })} /></div>
-            <div className="col-md-3">
+            <div className="col-12 col-md-3"><input className="form-control" placeholder="Section" value={form.section} onChange={e => setForm({ ...form, section: e.target.value })} /></div>
+            <div className="col-12 col-md-3">
               <select className="form-select" value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
                 <option value="">Gender</option>
                 <option value="male">Male</option>
@@ -175,10 +175,10 @@ export default function AdminStudents(){
                 <option value="other">Other</option>
               </select>
             </div>
-            <div className="col-md-3"><input type="date" className="form-control" value={form.dateOfBirth} onChange={e => setForm({ ...form, dateOfBirth: e.target.value })} /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Admission Number" value={form.admissionNo} onChange={e => setForm({ ...form, admissionNo: e.target.value })} required /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Parent Name" value={form.parentName} onChange={e => setForm({ ...form, parentName: e.target.value })} /></div>
-            <div className="col-md-4"><input className="form-control" placeholder="Parent Phone" value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} /></div>
+            <div className="col-12 col-md-3"><input type="date" className="form-control" value={form.dateOfBirth} onChange={e => setForm({ ...form, dateOfBirth: e.target.value })} /></div>
+            <div className="col-12 col-md-4"><input className="form-control" placeholder="Admission Number" value={form.admissionNo} onChange={e => setForm({ ...form, admissionNo: e.target.value })} required /></div>
+            <div className="col-12 col-md-4"><input className="form-control" placeholder="Parent Name" value={form.parentName} onChange={e => setForm({ ...form, parentName: e.target.value })} /></div>
+            <div className="col-12 col-md-4"><input className="form-control" placeholder="Parent Phone" value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} /></div>
             <div className="col-12"><input className="form-control" placeholder="Address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
             <div className="col-12"><button className="btn btn-success">{form._id ? 'Update' : 'Create Student'}</button></div>
           </form>
@@ -187,18 +187,18 @@ export default function AdminStudents(){
 
       <div className="card p-3 mb-3">
         <div className="row g-2 align-items-center">
-          <div className="col-md-3"><input className="form-control" placeholder="Search by name, roll or admission" value={q} onChange={e => setQ(e.target.value)} /></div>
-          <div className="col-md-2">
+          <div className="col-12 col-sm-6 col-md-3"><input className="form-control" placeholder="Search by name, roll or admission" value={q} onChange={e => setQ(e.target.value)} /></div>
+          <div className="col-12 col-sm-6 col-md-2">
             <select className="form-select" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
               <option value="">Filter Class</option>
               {classes.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
-          <div className="col-md-2"><input className="form-control" placeholder="Filter Section" value={filterSection} onChange={e => setFilterSection(e.target.value)} /></div>
-          <div className="col-md-2">
+          <div className="col-12 col-sm-6 col-md-2"><input className="form-control" placeholder="Filter Section" value={filterSection} onChange={e => setFilterSection(e.target.value)} /></div>
+          <div className="col-12 col-sm-6 col-md-2">
             <input type="file" accept=".csv,.xls,.xlsx" onChange={e => setFile(e.target.files[0])} className="form-control" disabled={importing} />
           </div>
-          <div className="col-md-3 text-end">
+          <div className="col-12 col-md-3 text-md-end">
             <button className="btn btn-primary me-2" onClick={handleImport} disabled={importing}>{importing ? 'Importing...' : 'Import'}</button>
             <small className="text-muted">Use template for exact columns</small>
           </div>

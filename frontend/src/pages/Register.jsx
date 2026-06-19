@@ -5,17 +5,17 @@ export default function Register(){
   return (
     <div className="container py-5">
       <div className="row justify-content-center">
-        <div className="col-lg-9">
+        <div className="col-12 col-lg-9">
           <div className="eb-card overflow-hidden">
             <div className="row g-0">
-              <div className="col-md-5 d-none d-md-flex" style={{background:'linear-gradient(135deg,#475569,#1e293b)',padding:'2.5rem 2rem',flexDirection:'column',justifyContent:'center'}}>
+              <div className="col-12 col-md-5 d-none d-md-flex" style={{background:'linear-gradient(135deg,#475569,#1e293b)',padding:'2.5rem 2rem',flexDirection:'column',justifyContent:'center'}}>
                 <div style={{fontSize:'3rem',marginBottom:'1rem'}}>🔒</div>
                 <h3 style={{fontWeight:800,color:'#fff'}}>Registration Closed</h3>
                 <p style={{color:'rgba(255,255,255,0.65)',fontSize:'0.9rem',marginTop:'0.75rem'}}>
                   Student and parent accounts are created only by school administration. Contact the school office for login credentials.
                 </p>
               </div>
-              <div className="col-md-7 p-4 p-lg-5">
+              <div className="col-12 col-md-7 p-4 p-lg-5">
                 <div style={{fontSize:'2rem',marginBottom:'0.75rem'}}>ℹ️</div>
                 <h4 style={{fontWeight:700}}>Admin-Only Registration</h4>
                 <p className="text-muted mt-2">Self-registration is <strong>disabled</strong> to protect student data. The school administrator will:</p>

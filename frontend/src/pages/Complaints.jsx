@@ -125,7 +125,7 @@ export default function Complaints() {
       <div className="row g-4 mt-1">
         {/* Submit Form — students & parents only */}
         {!isAdminOrTeacher && (
-          <div className="col-lg-4 animate-fade-up delay-1">
+          <div className="col-12 col-lg-4 animate-fade-up delay-1">
             <div className="eb-card p-4">
               <div className="d-flex align-items-center gap-2 mb-3">
                 <MessageSquareWarning size={16} color="var(--brand-primary-light)" />

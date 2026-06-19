@@ -52,7 +52,7 @@ export default function ParentDashboard(){
       <div className="container py-4">
         <h3>Welcome, {user?.parentName || 'Parent'}</h3>
       <div className="row">
-        <div className="col-md-4">
+        <div className="col-12 col-md-4">
           <div className="card mb-3">
             <div className="card-body">
               <h5 className="card-title">Child</h5>
@@ -71,16 +71,18 @@ export default function ParentDashboard(){
             </div>
           </div>
         </div>
-        <div className="col-md-8">
+        <div className="col-12 col-md-8">
           <div className="card mb-3">
             <div className="card-body">
               <h5 className="card-title">Attendance (latest)</h5>
+              <div className="table-responsive">
               <table className="table">
                 <thead><tr><th>Date</th><th>Status</th></tr></thead>
                 <tbody>
                   {attendance.map(a=> <tr key={a._id}><td>{safeDate(a.date)}</td><td>{a.status}</td></tr>)}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 

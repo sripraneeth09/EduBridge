@@ -308,11 +308,11 @@ export default function MealMonitoring() {
                     <h5 style={{ fontWeight: 700, margin: 0 }}>Publish Daily Menu</h5>
                   </div>
                   <form onSubmit={submitMenu} className="row g-3">
-                    <div className="col-md-6">
+                    <div className="col-12 col-md-6">
                       <label className="form-label">Date</label>
                       <input type="date" className="form-control" value={date} onChange={e => setDate(e.target.value)} required />
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-12 col-md-6">
                       <label className="form-label">Menu Name</label>
                       <input className="form-control" placeholder="e.g. Tamarind Rice & Egg" value={menuName} onChange={e => setMenuName(e.target.value)} required />
                     </div>
@@ -331,7 +331,7 @@ export default function MealMonitoring() {
 
           {/* Meal Menu & Ratings */}
           <div className="row g-4">
-            <div className={user.role === 'student' ? 'col-lg-7 animate-fade-up' : 'col-12 animate-fade-up'}>
+            <div className={user.role === 'student' ? 'col-12 col-lg-7 animate-fade-up' : 'col-12 animate-fade-up'}>
               <div className="eb-card p-4 h-100">
                 <div className="d-flex align-items-center gap-2 mb-3">
                   <UtensilsCrossed size={16} color="var(--brand-primary-light)" />
@@ -390,7 +390,7 @@ export default function MealMonitoring() {
 
             {/* Rating form — students only */}
             {user.role === 'student' && (
-              <div className="col-lg-5 animate-fade-up delay-2">
+              <div className="col-12 col-lg-5 animate-fade-up delay-2">
                 <div className="eb-card p-4 h-100">
                   <div className="d-flex align-items-center gap-2 mb-1">
                     <ThumbsUp size={16} color="var(--brand-primary-light)" />

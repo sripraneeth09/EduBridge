@@ -228,7 +228,7 @@ export default function Dashboard() {
             </h5>
           </div>
           <div className="row g-4 mb-4">
-            <div className="col-md-6">
+            <div className="col-12 col-sm-6 col-lg-6">
               <div className="eb-card p-3">
                 <h6 style={{ fontWeight: 700 }}>Recent Students</h6>
                 <ul className="list-unstyled mb-0 mt-3">
@@ -241,7 +241,7 @@ export default function Dashboard() {
                 </ul>
               </div>
             </div>
-            <div className="col-md-6">
+            <div className="col-12 col-sm-6 col-lg-6">
               <div className="eb-card p-3">
                 <h6 style={{ fontWeight: 700 }}>Students Per Class</h6>
                 <div className="d-flex flex-wrap gap-2 mt-3">
@@ -261,7 +261,7 @@ export default function Dashboard() {
               { icon: Wrench,              title: 'Infrastructure', desc: 'Monitor and track facility repair tasks.',                 to: '/infrastructure',   color: 'eb-card-teal',    iconColor: '#0d9488', iconBg: 'rgba(13,148,136,.12)' },
               { icon: Search,              title: 'Lost & Found',   desc: 'Manage unclaimed items and reunite students.',             to: '/lostfound',        color: 'eb-card-purple',  iconColor: '#7c3aed', iconBg: 'rgba(124,58,237,.12)' },
             ].map((card, i) => (
-              <div key={i} className={`col-md-4 animate-fade-up delay-${i + 1}`}>
+              <div key={i} className={`col-12 col-sm-6 col-lg-4 animate-fade-up delay-${i + 1}`}>
                 <div className="eb-feature-card d-flex flex-column" style={{ padding: '1.5rem' }}>
                   <div className="eb-feature-icon-wrap" style={{ background: card.iconBg, color: card.iconColor }}>
                     <card.icon size={20} />
@@ -286,7 +286,7 @@ export default function Dashboard() {
             { icon: Bell,               title: 'School Notices',    desc: 'Post announcements and academic schedules.',          to: '/notices',        iconColor: '#0369a1', iconBg: 'rgba(14,165,233,.1)'  },
             { icon: Search,              title: 'Lost & Found',     desc: 'Help students recover lost valuables.',               to: '/lostfound',      iconColor: '#7c3aed', iconBg: 'rgba(124,58,237,.1)'  },
           ].map((card, i) => (
-            <div key={i} className={`col-md-4 animate-fade-up delay-${i + 1}`}>
+            <div key={i} className={`col-12 col-md-4 animate-fade-up delay-${i + 1}`}>
               <div className="eb-feature-card d-flex flex-column" style={{ padding: '1.5rem' }}>
                 <div className="eb-feature-icon-wrap" style={{ background: card.iconBg, color: card.iconColor }}>
                   <card.icon size={20} />
@@ -340,7 +340,7 @@ export default function Dashboard() {
 
           <div className="row g-4 mb-4">
             {/* Today's meal */}
-            <div className="col-md-6 animate-fade-up delay-2">
+            <div className="col-12 col-sm-6 col-lg-6 animate-fade-up delay-2">
               <div className="eb-card p-4 h-100">
                 <div className="d-flex align-items-center gap-2 mb-3">
                   <UtensilsCrossed size={16} color="var(--brand-primary-light)" />
@@ -373,7 +373,7 @@ export default function Dashboard() {
             </div>
 
             {/* Quick actions */}
-            <div className="col-md-6 animate-fade-up delay-3">
+            <div className="col-12 col-sm-6 col-lg-6 animate-fade-up delay-3">
               <div className="eb-card p-4 h-100">
                 <div className="d-flex align-items-center gap-2 mb-3">
                   <TrendingUp size={16} color="var(--brand-primary-light)" />
@@ -424,7 +424,7 @@ export default function Dashboard() {
       {role === 'parent' && (
         <>
           <div className="row g-4 mb-4">
-            <div className="col-md-6 animate-fade-up">
+            <div className="col-12 col-md-6 animate-fade-up">
               <div className="eb-card p-4 h-100">
                 <div className="d-flex align-items-center gap-2 mb-2">
                   <Baby size={16} color="var(--brand-primary-light)" />
@@ -445,7 +445,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            <div className="col-md-6 animate-fade-up delay-2">
+            <div className="col-12 col-md-6 animate-fade-up delay-2">
               <div className="eb-card p-4 h-100">
                 <div className="d-flex align-items-center gap-2 mb-2">
                   <Bell size={16} color="var(--brand-primary-light)" />
@@ -499,7 +499,7 @@ export default function Dashboard() {
             { icon: Search,  title: 'Lost & Found',     desc: 'Manage found items and help students recover valuables.',   to: '/lostfound',      iconColor: '#7c3aed', iconBg: 'rgba(124,58,237,.1)' },
             { icon: Bell,    title: 'School Notices',   desc: 'Stay aware of announcements and maintenance alerts.',       to: '/notices',        iconColor: '#0369a1', iconBg: 'rgba(14,165,233,.1)' },
           ].map((card, i) => (
-            <div key={i} className={`col-md-4 animate-fade-up delay-${i + 1}`}>
+            <div key={i} className={`col-12 col-md-4 animate-fade-up delay-${i + 1}`}>
               <div className="eb-feature-card d-flex flex-column" style={{ padding: '1.5rem' }}>
                 <div className="eb-feature-icon-wrap" style={{ background: card.iconBg, color: card.iconColor }}>
                   <card.icon size={20} />

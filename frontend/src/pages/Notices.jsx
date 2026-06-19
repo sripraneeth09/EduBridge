@@ -91,7 +91,7 @@ export default function Notices() {
       {loading ? (
         <div className="row g-3">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="col-md-6">
+            <div key={i} className="col-12 col-md-6">
               <div className="eb-skeleton" style={{ height: 140, borderRadius: 14 }} />
             </div>
           ))}
@@ -102,7 +102,7 @@ export default function Notices() {
             const accentColor = accentColors[i % accentColors.length]
             const dateObj = new Date(n.date || n.createdAt)
             return (
-              <div key={n._id} className={`col-md-6 animate-fade-up delay-${Math.min(i % 4 + 1, 8)}`}>
+              <div key={n._id} className={`col-12 col-md-6 animate-fade-up delay-${Math.min(i % 4 + 1, 8)}`}>
                 <div className="eb-notice-card h-100" style={{ borderLeftColor: accentColor }}>
                   <div className="d-flex justify-content-between align-items-start">
                     <div className="flex-grow-1 pe-3">

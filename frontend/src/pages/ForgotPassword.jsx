@@ -17,11 +17,11 @@ export default function ForgotPassword(){
   return (
     <div className="container py-5">
       <div className="row justify-content-center">
-        <div className="col-lg-8">
+        <div className="col-12 col-lg-8">
           <div className="eb-card overflow-hidden">
             <div className="row g-0">
               {/* Left panel */}
-              <div className="col-md-5 d-none d-md-flex"
+              <div className="col-12 col-md-5 d-none d-md-flex"
                 style={{background:'linear-gradient(135deg,#4f46e5,#0ea5e9)',padding:'2.5rem 2rem',flexDirection:'column',justifyContent:'center'}}>
                 <div style={{fontSize:'3rem',marginBottom:'1rem'}}>🔑</div>
                 <h3 style={{fontWeight:800,color:'#fff'}}>Password Help</h3>
@@ -38,7 +38,7 @@ export default function ForgotPassword(){
               </div>
 
               {/* Right form */}
-              <div className="col-md-7 p-4 p-lg-5">
+              <div className="col-12 col-md-7 p-4 p-lg-5">
                 {sent ? (
                   <div className="text-center py-4 animate-fade-up">
                     <div style={{fontSize:'3rem',marginBottom:'1rem'}}>📬</div>

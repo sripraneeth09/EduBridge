@@ -80,10 +80,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--surface-2); }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--brand-primary-light); }
+
+/* ── Responsive Images ── */
+img { max-width: 100%; height: auto; display: block; }
+
+/* ── Table Responsive ── */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 /* ============================================================
    NAVBAR
@@ -103,7 +109,7 @@ h1, h2, h3, h4, h5, h6 {
 .eb-navbar .container {
   display: flex;
   align-items: center;
-  height: 64px;
+  min-height: 64px;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
 }
@@ -115,7 +121,8 @@ h1, h2, h3, h4, h5, h6 {
   flex-shrink: 0;
 }
 .eb-navbar-logo-icon {
-  width: 36px; height: 36px;
+  width: clamp(28px, 6vw, 36px);
+  height: clamp(28px, 6vw, 36px);
   background: var(--gradient-hero);
   border-radius: var(--r-sm);
   display: flex;
@@ -128,7 +135,7 @@ h1, h2, h3, h4, h5, h6 {
 .eb-navbar-brand-text {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: clamp(0.85rem, 2.5vw, 1.15rem);
   color: var(--brand-primary);
   letter-spacing: -0.4px;
   line-height: 1;
@@ -175,7 +182,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0.5rem;
   margin-top: 0.5rem;
   background: var(--surface);
-  min-width: 200px;
+  min-width: min(200px, 90vw);
 }
 .eb-navbar .dropdown-item {
   border-radius: var(--r-xs);
@@ -237,7 +244,7 @@ h1, h2, h3, h4, h5, h6 {
    ============================================================ */
 .eb-hero {
   background: var(--surface);
-  padding: 6rem 0 5rem;
+  padding: clamp(2rem, 8vw, 6rem) 0 clamp(1.5rem, 6vw, 5rem);
   position: relative;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
@@ -328,7 +335,7 @@ h1, h2, h3, h4, h5, h6 {
    ============================================================ */
 .eb-stat-card {
   border-radius: var(--r-lg);
-  padding: 1.5rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
   box-shadow: var(--shadow-sm);
   transition: transform var(--t-base), box-shadow var(--t-base);
   position: relative;
@@ -340,21 +347,22 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-md);
 }
 .eb-stat-icon {
-  width: 40px; height: 40px;
+  width: clamp(32px, 8vw, 40px);
+  height: clamp(32px, 8vw, 40px);
   border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1rem;
+  margin-bottom: clamp(0.75rem, 2vw, 1rem);
 }
 .eb-stat-card .stat-value {
-  font-size: 1.9rem;
+  font-size: clamp(1.5rem, 4vw, 1.9rem);
   font-weight: 800;
   letter-spacing: -1.5px;
   line-height: 1;
 }
 .eb-stat-card .stat-label {
-  font-size: 0.8rem;
+  font-size: clamp(0.7rem, 1.5vw, 0.8rem);
   font-weight: 500;
   color: var(--text-muted);
   margin-top: 0.35rem;
@@ -471,13 +479,14 @@ h1, h2, h3, h4, h5, h6 {
   color: #fff;
   font-family: 'Inter', sans-serif;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: clamp(0.8rem, 2vw, 0.875rem);
   padding: 0.575rem 1.25rem;
   cursor: pointer;
   transition: opacity var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
   box-shadow: 0 2px 8px rgba(37,99,235,.30);
   text-decoration: none;
   white-space: nowrap;
+  min-height: clamp(40px, 8vw, 44px);
 }
 .eb-btn-primary:hover:not(:disabled) {
   opacity: 0.9;
@@ -539,7 +548,7 @@ h1, h2, h3, h4, h5, h6 {
 .form-control, .form-select {
   border-radius: var(--r-sm);
   border: 1.5px solid var(--border);
-  padding: 0.55rem 0.9rem;
+  padding: clamp(0.4rem, 1vw, 0.55rem) clamp(0.7rem, 1.5vw, 0.9rem);
   font-size: 0.875rem;
   font-family: 'Inter', sans-serif;
   color: var(--text-primary);
@@ -568,7 +577,7 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.7rem;
+  font-size: clamp(0.6rem, 1vw, 0.7rem);
   font-weight: 600;
   padding: 0.22rem 0.65rem;
   border-radius: 20px;
@@ -600,11 +609,11 @@ h1, h2, h3, h4, h5, h6 {
    PAGE HEADER
    ============================================================ */
 .eb-page-header {
-  padding: 2.5rem 0 2rem;
+  padding: clamp(1.5rem, 5vw, 2.5rem) 0 clamp(1rem, 4vw, 2rem);
 }
 .eb-page-header h2 {
   font-weight: 800;
-  font-size: 1.7rem;
+  font-size: clamp(1.25rem, 5vw, 1.7rem);
   color: var(--text-primary);
   letter-spacing: -0.5px;
   margin-bottom: 0.25rem;
@@ -691,7 +700,7 @@ h1, h2, h3, h4, h5, h6 {
    ============================================================ */
 .eb-stars { display: inline-flex; gap: 3px; }
 .eb-star {
-  font-size: 1.3rem;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   cursor: pointer;
   color: var(--border);
   transition: color var(--t-fast), transform var(--t-fast);
@@ -844,11 +853,11 @@ h1, h2, h3, h4, h5, h6 {
 .eb-auth-panel {
   background: var(--gradient-dark);
   border-radius: var(--r-xl) 0 0 var(--r-xl);
-  padding: 2.75rem 2.25rem;
+  padding: clamp(1.5rem, 5vw, 2.75rem) clamp(1rem, 4vw, 2.25rem);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 440px;
+  min-height: clamp(300px, 100vh, 440px);
   position: relative;
   overflow: hidden;
 }
@@ -868,7 +877,8 @@ h1, h2, h3, h4, h5, h6 {
    AVATAR
    ============================================================ */
 .eb-avatar {
-  width: 68px; height: 68px;
+  width: clamp(48px, 15vw, 68px);
+  height: clamp(48px, 15vw, 68px);
   border-radius: var(--r-md);
   display: flex;
   align-items: center;
@@ -876,7 +886,7 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 800;
   color: #fff;
   flex-shrink: 0;
-  font-size: 1.4rem;
+  font-size: clamp(1rem, 3vw, 1.4rem);
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .eb-avatar.role-admin       { background: var(--gradient-indigo); }
@@ -928,7 +938,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.3px;
 }
 .eb-footer-desc {
-  font-size: 0.85rem;
+  font-size: clamp(0.75rem, 1.5vw, 0.85rem);
   color: rgba(255,255,255,0.45);
   line-height: 1.65;
 }
@@ -993,19 +1003,84 @@ h1, h2, h3, h4, h5, h6 {
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media (max-width: 767px) {
-  .eb-hero { padding: 4rem 0 3rem; }
-  .eb-hero h1 { letter-spacing: -1px; }
-  .eb-auth-panel { border-radius: var(--r-xl) var(--r-xl) 0 0; }
-  .eb-stat-card .stat-value { font-size: 1.5rem; }
-  .eb-navbar .container { height: 56px; }
+
+/* Mobile First - Extra Small (320px - 639px) */
+@media (max-width: 639px) {
+  ::-webkit-scrollbar { width: 6px; }
+  
+  .eb-navbar .container { 
+    min-height: 56px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .eb-navbar-brand-sub { display: none; }
+  .eb-navbar .nav-link { font-size: 0.75rem; padding: 0.3rem 0.5rem !important; }
+  
+  .eb-hero { padding: 2rem 1rem; }
+  .eb-hero h1 { font-size: 1.75rem; letter-spacing: -0.8px; }
+  .eb-hero p.lead { font-size: 0.9rem; }
+  
+  .eb-auth-panel { 
+    border-radius: var(--r-xl) var(--r-xl) 0 0; 
+    padding: 1.5rem 1rem;
+    min-height: auto;
+  }
+  
+  .eb-feature-card { padding: 1.25rem; }
+  .eb-feature-icon-wrap { width: 36px; height: 36px; margin-bottom: 0.75rem; }
+  
+  .eb-section-title { font-size: clamp(1.25rem, 4vw, 1.9rem); }
+  
+  .container { padding-left: 1rem; padding-right: 1rem; }
+  
+  .eb-btn-primary, .eb-btn-outline, .eb-btn-ghost { font-size: 0.75rem; padding: 0.5rem 1rem; }
+  
+  .eb-badge { font-size: 0.6rem; padding: 0.15rem 0.5rem; }
+}
+
+/* Tablets - Small (640px - 767px) */
+@media (min-width: 640px) and (max-width: 767px) {
+  .eb-navbar .container { min-height: 60px; }
+  .eb-hero { padding: 3rem 0; }
+  .eb-container { padding-left: 1.25rem; padding-right: 1.25rem; }
+}
+
+/* Tablets - Medium (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .eb-page-header h2 { font-size: 1.5rem; }
+  .eb-stat-card { padding: 1.25rem; }
+  .eb-stat-card .stat-value { font-size: 1.7rem; }
+}
+
+/* Small Laptops (1024px - 1365px) */
+@media (min-width: 1024px) and (max-width: 1365px) {
+  .container { max-width: 960px; }
+}
+
+/* Large Laptops (1366px - 1919px) */
+@media (min-width: 1366px) and (max-width: 1919px) {
+  .container { max-width: 1200px; }
+}
+
+/* Desktop & Large Monitors (1920px+) */
+@media (min-width: 1920px) {
+  .container { max-width: 1440px; margin: 0 auto; }
+  .eb-hero h1 { font-size: 3.75rem; }
+}
+
+/* Ultra-wide Screens (2560px+) */
+@media (min-width: 2560px) {
+  html { font-size: 18px; }
+  .container { max-width: 1600px; }
+  .eb-hero h1 { font-size: clamp(3.75rem, 6vw, 4.5rem); }
 }
 
 /* ============================================================
    CHECKBOX ATTENDANCE
    ============================================================ */
 .eb-checkbox-attendance {
-  width: 20px; height: 20px;
+  width: clamp(20px, 5vw, 24px);
+  height: clamp(20px, 5vw, 24px);
   border-radius: 4px;
   border: 2px solid var(--border-strong);
   cursor: pointer;
@@ -1014,6 +1089,7 @@ h1, h2, h3, h4, h5, h6 {
   transition: all var(--t-fast);
   background: var(--surface);
   flex-shrink: 0;
+  padding: clamp(2px, 1vw, 3px);
 }
 .eb-checkbox-attendance:checked {
   background: var(--brand-accent);

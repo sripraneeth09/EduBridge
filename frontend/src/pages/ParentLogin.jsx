@@ -33,7 +33,7 @@ export default function ParentLogin(){
   return (
     <div className="container py-4">
       <div className="row justify-content-center">
-        <div className="col-md-6">
+        <div className="col-12 col-md-6">
           <h3>Parent Login</h3>
           {error && <div className="alert alert-danger">{error}</div>}
           <form onSubmit={submit}>

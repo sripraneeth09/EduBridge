@@ -57,10 +57,10 @@ export default function AdminClasses(){
         <div className="card p-4 mb-4">
           <h5>Create Class</h5>
           <form onSubmit={submitForm} className="row g-3">
-            <div className="col-md-3"><input className="form-control" placeholder="Class Name (e.g., 10A)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
-            <div className="col-md-3"><input type="number" className="form-control" placeholder="Grade (10, 9, 8...)" value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value })} required /></div>
-            <div className="col-md-3"><input className="form-control" placeholder="Section (A, B, C...)" value={form.section} onChange={e => setForm({ ...form, section: e.target.value })} /></div>
-            <div className="col-md-3">
+            <div className="col-12 col-md-3"><input className="form-control" placeholder="Class Name (e.g., 10A)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
+            <div className="col-12 col-md-3"><input type="number" className="form-control" placeholder="Grade (10, 9, 8...)" value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value })} required /></div>
+            <div className="col-12 col-md-3"><input className="form-control" placeholder="Section (A, B, C...)" value={form.section} onChange={e => setForm({ ...form, section: e.target.value })} /></div>
+            <div className="col-12 col-md-3">
               <select className="form-select" value={form.classTeacher} onChange={e => setForm({ ...form, classTeacher: e.target.value })}>
                 <option value="">Class Teacher</option>
                 {teachers.map(t => <option key={t._id} value={t.user._id}>{t.user.name}</option>)}

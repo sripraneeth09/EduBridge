@@ -57,7 +57,7 @@ export default function ChangePassword() {
   return (
     <div className="container py-5">
       <div className="row justify-content-center">
-        <div className="col-lg-5 col-md-7">
+        <div className="col-12 col-md-7 col-lg-5">
           <div className="eb-card animate-scale">
             <div className="text-center mb-4">
               <div

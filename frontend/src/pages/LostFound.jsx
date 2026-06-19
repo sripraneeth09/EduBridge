@@ -123,7 +123,7 @@ export default function LostFound() {
 
       <div className="row g-4 mt-1">
         {/* Report Forms column */}
-        <div className="col-lg-4 animate-fade-up delay-1">
+        <div className="col-12 col-lg-4 animate-fade-up delay-1">
           {/* Lost */}
           <div className="eb-card p-4 mb-4">
             <div className="d-flex align-items-center gap-2 mb-3">

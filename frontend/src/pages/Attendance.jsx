@@ -206,7 +206,7 @@ export default function Attendance() {
       <div className="row g-4 mt-1">
         {/* Teacher / Admin — Class Attendance */}
         {(user.role === 'teacher' || user.role === 'admin') && (
-          <div className="col-lg-7 animate-fade-up delay-1">
+          <div className="col-12 col-lg-7 animate-fade-up delay-1">
             <div className="eb-card p-4 h-100">
               <div className="d-flex align-items-center gap-2 mb-4">
                 <Users size={16} color="var(--brand-primary-light)" />
