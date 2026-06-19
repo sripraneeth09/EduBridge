@@ -36,12 +36,18 @@ export default function AdminStudents(){
   const submitForm = async e => {
     e.preventDefault()
     try{
-      await studentService.create(form)
-      setMessage('Student created')
+      if (form._id) {
+        await studentService.update(form._id, form)
+        setMessage('Student updated')
+      } else {
+        await studentService.create(form)
+        setMessage('Student created')
+      }
       setForm({ name: '', email: '', rollNo: '', className: '', section: '', gender: '', dateOfBirth: '', parentName: '', parentPhone: '', admissionNo: '', address: '' })
+      setShowForm(false)
       loadStudents()
     }catch(err){
-      setMessage(err.response?.data?.message || 'Error creating student')
+      setMessage(err.response?.data?.message || 'Error saving student')
     }
   }
 
