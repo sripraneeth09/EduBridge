@@ -13,12 +13,14 @@ export default function ParentLogin(){
     try{
       const formatDobInput = (s) => {
         if(!s) return s;
-        // handle HTML date input (YYYY-MM-DD) -> DD/MM/YYYY
+        // handle HTML date input (YYYY-MM-DD) -> DDMMYYYY (no separators)
         if (s.includes('-')){
           const [y,m,d] = s.split('-');
-          return `${d}/${m}/${y}`;
+          return `${d}${m}${y}`;
         }
-        return s;
+        // if user typed with slashes or other separators, strip non-digits
+        const digits = s.replace(/\D/g, '');
+        return digits;
       }
 
       const res = await api.post('/auth/parent-login', { mobile, password: formatDobInput(dob) });

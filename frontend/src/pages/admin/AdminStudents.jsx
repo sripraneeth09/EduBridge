@@ -9,6 +9,7 @@ export default function AdminStudents(){
   const [showForm, setShowForm] = useState(false)
   const [message, setMessage] = useState('')
   const [importSummary, setImportSummary] = useState(null)
+  const [importing, setImporting] = useState(false)
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
   const [total, setTotal] = useState(0)
@@ -22,11 +23,16 @@ export default function AdminStudents(){
   useEffect(() => { loadClasses() }, [])
 
   const loadStudents = async () => {
+    console.log('AdminStudents.loadStudents', { page, limit, q, filterClass, filterSection })
     try{
       const res = await studentService.list({ page, limit, q, className: filterClass, section: filterSection })
+      console.log('AdminStudents.loadStudents response', res.data)
       setStudents(res.data.students)
       setTotal(res.data.total)
-    }catch(e){ setMessage('Failed loading students') }
+    }catch(e){
+      console.error('AdminStudents.loadStudents error', e)
+      setMessage('Failed loading students')
+    }
   }
 
   const loadClasses = () => {
@@ -57,19 +63,30 @@ export default function AdminStudents(){
   }
 
   const handleImport = async (e) => {
-    // invoked via button click; event is optional
-    if(e && e.preventDefault) e.preventDefault()
-    if(!file) return setMessage('Select a file first')
+    if (e && e.preventDefault) e.preventDefault()
+    if (!file) return setMessage('Select a file first')
+
+    console.log('AdminStudents.handleImport start', { fileName: file.name, fileSize: file.size })
+    setImporting(true)
+    setImportSummary(null)
+    setMessage('Importing students...')
+
     const fd = new FormData(); fd.append('file', file)
-    try{
+    try {
       const res = await studentService.import(fd)
+      console.log('AdminStudents.handleImport success', res.data)
       setImportSummary(res.data)
       setMessage(`Import completed: ${res.data.imported} imported, ${res.data.skipped} skipped`)
-      loadStudents()
-    }catch(err){
+      await loadStudents()
+      console.log('AdminStudents.handleImport loadStudents complete')
+    } catch (err) {
+      console.error('AdminStudents.handleImport error', err.response?.data || err.message || err)
       const serverMessage = err.response?.data?.message || err.response?.data?.error || JSON.stringify(err.response?.data)
       setMessage(serverMessage || 'Import failed')
       setImportSummary(null)
+    } finally {
+      console.log('AdminStudents.handleImport finally')
+      setImporting(false)
     }
   }
 
@@ -89,6 +106,12 @@ export default function AdminStudents(){
       const a = document.createElement('a'); a.href = url; a.download = 'students-template.xlsx'; a.click();
       window.URL.revokeObjectURL(url)
     }catch(e){ setMessage('Template download failed') }
+  }
+
+  const formatDob = (value) => {
+    if (!value) return '-'
+    if (/^\d{8}$/.test(value)) return `${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4)}`
+    return value
   }
 
   return (
@@ -173,10 +196,10 @@ export default function AdminStudents(){
           </div>
           <div className="col-md-2"><input className="form-control" placeholder="Filter Section" value={filterSection} onChange={e => setFilterSection(e.target.value)} /></div>
           <div className="col-md-2">
-            <input type="file" accept=".csv,.xls,.xlsx" onChange={e => setFile(e.target.files[0])} className="form-control" />
+            <input type="file" accept=".csv,.xls,.xlsx" onChange={e => setFile(e.target.files[0])} className="form-control" disabled={importing} />
           </div>
           <div className="col-md-3 text-end">
-            <button className="btn btn-primary me-2" onClick={handleImport}>Import</button>
+            <button className="btn btn-primary me-2" onClick={handleImport} disabled={importing}>{importing ? 'Importing...' : 'Import'}</button>
             <small className="text-muted">Use template for exact columns</small>
           </div>
         </div>
@@ -209,7 +232,7 @@ export default function AdminStudents(){
                 <td>{s.className || '-'}</td>
                 <td>{s.section || '-'}</td>
                 <td>{s.gender || '-'}</td>
-                <td>{s.dateOfBirth ? new Date(s.dateOfBirth).toLocaleDateString() : '-'}</td>
+                <td>{formatDob(s.dateOfBirth)}</td>
                 <td>{s.parentName || '-'}</td>
                 <td>{s.parentPhone || '-'}</td>
                 <td>{s.address || '-'}</td>

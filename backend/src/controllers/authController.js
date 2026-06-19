@@ -66,6 +66,28 @@ exports.me = async (req, res) => {
   res.json({ user: req.user });
 };
 
+const normalizeDobString = (value) => {
+  if (value === undefined || value === null) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const day = `${value.getDate()}`.padStart(2, '0');
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const year = value.getFullYear();
+    return `${day}${month}${year}`;
+  }
+  // Accept common separators (/, -) by stripping non-digits
+  const raw = value.toString().trim();
+  const digits = raw.replace(/\D/g, '');
+  if (!digits || !/^[0-9]+$/.test(digits)) return null;
+  const normalized = digits.padStart(8, '0');
+  if (!/^\d{8}$/.test(normalized)) return null;
+  const day = parseInt(normalized.slice(0, 2), 10);
+  const month = parseInt(normalized.slice(2, 4), 10);
+  const year = parseInt(normalized.slice(4), 10);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return normalized;
+};
+
 // Parent login using parent's mobile (parentPhone) and child's DOB as password
 exports.parentLogin = async (req, res) => {
   try{
@@ -75,20 +97,9 @@ exports.parentLogin = async (req, res) => {
     const student = await Student.findOne({ parentPhone: { $regex: `^${mobile.toString().trim()}$`, $options: 'i' } });
     if(!student) return res.status(400).json({ message: 'Invalid credentials' });
 
-    // Normalize DOB to compare. Expecting parent to enter DOB as DD/MM/YYYY (common format).
-    const parseDob = (s) => {
-      if(!s) return null;
-      const parts = s.toString().trim().split(/[^0-9]+/).filter(Boolean);
-      if(parts.length !== 3) return null;
-      // assume DD/MM/YYYY
-      const [d, m, y] = parts.map(p => parseInt(p,10));
-      if(!d || !m || !y) return null;
-      return new Date(y, m-1, d);
-    }
-
-    const provided = parseDob(password);
-    const dob = student.dateOfBirth ? new Date(student.dateOfBirth) : null;
-    if(!dob || !provided || dob.setHours(0,0,0,0) !== provided.setHours(0,0,0,0)){
+    const provided = normalizeDobString(password);
+    const stored = normalizeDobString(student.dateOfBirth);
+    if(!stored || !provided || stored !== provided) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 

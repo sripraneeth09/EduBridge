@@ -3,49 +3,101 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
 
+// Preserve DOB exactly as DDMMYYYY string. Do not convert to ISO dates for storage.
+// Numeric Excel values without a leading zero are normalized to 8 digits.
+const normalizeDobString = (value) => {
+  if (value === undefined || value === null) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const day = `${value.getDate()}`.padStart(2, '0');
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const year = value.getFullYear();
+    return `${day}${month}${year}`;
+  }
+
+  const raw = value.toString().trim();
+  if (!raw || !/^[0-9]+$/.test(raw)) return null;
+  const normalized = raw.padStart(8, '0');
+  if (!/^\d{8}$/.test(normalized)) return null;
+  const day = parseInt(normalized.slice(0, 2), 10);
+  const month = parseInt(normalized.slice(2, 4), 10);
+  const year = parseInt(normalized.slice(4), 10);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return normalized;
+};
+
+const normalizeGender = (value) => {
+  if (value === undefined || value === null) return undefined;
+  const raw = value.toString().trim().toLowerCase();
+  if (!raw) return undefined;
+  const map = {
+    'm': 'male',
+    'male': 'male',
+    'f': 'female',
+    'female': 'female',
+    'o': 'other',
+    'other': 'other'
+  };
+  return map[raw];
+};
+
 const getPasswordFromDob = (dob) => {
-  if(!dob) return null;
-  const date = new Date(dob);
-  if(Number.isNaN(date.getTime())) return null;
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}${month}${day}`;
+  return normalizeDobString(dob);
 };
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 
-const createStudentUser = async ({ name, email, registrationNo, dateOfBirth }) => {
+const createStudentUser = async ({ name, email, registrationNo, dateOfBirth }, session = null) => {
   const normalizedEmail = email ? email.toString().trim().toLowerCase() : undefined;
   const reg = registrationNo ? registrationNo.toString().trim().toUpperCase() : undefined;
+  const findUser = (query) => session ? User.findOne(query).session(session) : User.findOne(query);
+
+  console.log('createStudentUser start', { name, normalizedEmail, registrationNo: reg, dateOfBirth, hasSession: !!session });
+
   let user = null;
-  if(normalizedEmail){
-    user = await User.findOne({ email: normalizedEmail });
+  if (normalizedEmail) {
+    user = await findUser({ email: normalizedEmail });
+    console.log('createStudentUser found by email', { userId: user?._id });
   }
-  if(!user && reg){
-    user = await User.findOne({ registrationNo: { $regex: `^${escapeRegex(reg)}$`, $options: 'i' } });
+  if (!user && reg) {
+    user = await findUser({ registrationNo: { $regex: `^${escapeRegex(reg)}$`, $options: 'i' } });
+    console.log('createStudentUser found by registrationNo', { userId: user?._id });
   }
-  if(user) return { user, rawPassword: null };
+  if (user) {
+    console.log('createStudentUser existing user reused', { userId: user._id });
+    return { user, rawPassword: null };
+  }
 
   const rawPassword = getPasswordFromDob(dateOfBirth) || Math.random().toString(36).slice(-8);
   const hashed = await bcrypt.hash(rawPassword, 10);
   const createData = { name, password: hashed, role: 'student' };
-  if(reg) createData.registrationNo = reg;
-  if(normalizedEmail) createData.email = normalizedEmail;
+  if (reg) createData.registrationNo = reg;
+  if (normalizedEmail) createData.email = normalizedEmail;
 
   try {
-    const newUser = await User.create(createData);
+    let newUser;
+    if (session) {
+      newUser = new User(createData);
+      await newUser.save({ session });
+    } else {
+      newUser = await User.create(createData);
+    }
+    console.log('createStudentUser created', { userId: newUser._id, rawPassword: rawPassword ? 'yes' : 'no' });
     return { user: newUser, rawPassword };
   } catch (err) {
+    console.error('createStudentUser error', err.message, err.code, err.keyValue);
     if (err.code === 11000) {
-      const existingByEmail = normalizedEmail
-        ? await User.findOne({ email: { $regex: `^${escapeRegex(normalizedEmail)}$`, $options: 'i' } })
-        : null;
-      if (existingByEmail) return { user: existingByEmail, rawPassword: null };
-
+      const existingByEmail = normalizedEmail ? await findUser({ email: { $regex: `^${escapeRegex(normalizedEmail)}$`, $options: 'i' } }) : null;
+      if (existingByEmail) {
+        console.log('createStudentUser duplicate email race, reused existing user', { userId: existingByEmail._id });
+        return { user: existingByEmail, rawPassword: null };
+      }
       if (reg) {
-        const existingByReg = await User.findOne({ registrationNo: { $regex: `^${escapeRegex(reg)}$`, $options: 'i' } });
-        if (existingByReg) return { user: existingByReg, rawPassword: null };
+        const existingByReg = await findUser({ registrationNo: { $regex: `^${escapeRegex(reg)}$`, $options: 'i' } });
+        if (existingByReg) {
+          console.log('createStudentUser duplicate reg race, reused existing user', { userId: existingByReg._id });
+          return { user: existingByReg, rawPassword: null };
+        }
       }
     }
     throw err;
@@ -53,23 +105,40 @@ const createStudentUser = async ({ name, email, registrationNo, dateOfBirth }) =
 };
 
 exports.createStudent = async (req, res, next) => {
+  let session = null;
+  let useTransaction = false;
+  let createdUserId = null;
   try {
     const data = req.body;
-    if(!data.name || !data.rollNo || !data.admissionNo) return res.status(400).json({ message: 'name, rollNo and admissionNo are required' });
+    if (!data.name || !data.rollNo || !data.admissionNo) return res.status(400).json({ message: 'name, rollNo and admissionNo are required' });
+
+    const dateOfBirth = normalizeDobString(data.dateOfBirth);
+    if (!dateOfBirth) {
+      return res.status(400).json({ message: 'Invalid dateOfBirth format. Expected 8 digits DDMMYYYY.' });
+    }
 
     const dupRoll = await Student.findOne({ rollNo: data.rollNo });
-    if(dupRoll) return res.status(409).json({ message: 'Duplicate roll number' });
+    if (dupRoll) return res.status(409).json({ message: 'Duplicate roll number' });
     const dupAdm = await Student.findOne({ admissionNo: data.admissionNo });
-    if(dupAdm) return res.status(409).json({ message: 'Duplicate admission number' });
+    if (dupAdm) return res.status(409).json({ message: 'Duplicate admission number' });
+
+    session = await Student.startSession();
+    try {
+      session.startTransaction();
+      useTransaction = true;
+    } catch (_) {
+      // If transactions are unavailable on this MongoDB deployment, continue with best-effort cleanup.
+    }
 
     const userObj = await createStudentUser({
       name: data.name,
       email: data.email,
       registrationNo: data.admissionNo,
-      dateOfBirth: data.dateOfBirth
-    });
+      dateOfBirth
+    }, session);
+    createdUserId = userObj.rawPassword ? userObj.user._id : null;
 
-    const st = await Student.create({
+    const student = new Student({
       user: userObj.user._id,
       name: data.name,
       rollNo: data.rollNo,
@@ -77,22 +146,32 @@ exports.createStudent = async (req, res, next) => {
       registrationNo: data.admissionNo,
       className: data.className || data.class || '',
       section: data.section || '',
-      gender: data.gender,
-      dateOfBirth: data.dateOfBirth,
+      gender: normalizeGender(data.gender),
+      dateOfBirth,
       parentName: data.parentName,
       parentPhone: data.parentPhone,
       address: data.address
     });
+    await student.save(session ? { session } : {});
+
+    if (useTransaction) await session.commitTransaction();
 
     return res.status(201).json({
-      student: st,
+      student,
       credentials: userObj.rawPassword ? { registrationNo: data.admissionNo, password: userObj.rawPassword } : { registrationNo: data.admissionNo }
     });
   } catch (err) {
-    if(err.code === 11000){
+    if (useTransaction && session) {
+      await session.abortTransaction();
+    } else if (createdUserId) {
+      await User.findByIdAndDelete(createdUserId);
+    }
+    if (err.code === 11000) {
       return res.status(409).json({ message: 'Duplicate key', detail: err.keyValue });
     }
     next(err);
+  } finally {
+    if (session) session.endSession();
   }
 };
 
@@ -143,6 +222,16 @@ exports.updateStudent = async (req, res, next) => {
       const dup = await Student.findOne({ admissionNo: data.admissionNo, _id: { $ne: id } });
       if(dup) return res.status(409).json({ message: 'Duplicate admission number' });
     }
+    if(data.dateOfBirth !== undefined){
+      const dateOfBirth = normalizeDobString(data.dateOfBirth);
+      if (!dateOfBirth) {
+        return res.status(400).json({ message: 'Invalid dateOfBirth format. Expected 8 digits DDMMYYYY.' });
+      }
+      data.dateOfBirth = dateOfBirth;
+    }
+    if(data.gender !== undefined){
+      data.gender = normalizeGender(data.gender);
+    }
 
     const updated = await Student.findByIdAndUpdate(id, data, { new: true });
     if(!updated) return res.status(404).json({ message: 'Not found' });
@@ -164,13 +253,19 @@ exports.deleteStudent = async (req, res, next) => {
 
 // Import students from uploaded Excel/CSV file
 exports.importStudents = async (req, res, next) => {
+  console.log('importStudents received');
   try{
-    if(!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    // enable cellDates so Excel date cells are parsed as JS Dates when possible
+    if(!req.file) {
+      console.log('importStudents missing file');
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    console.log('importStudents file metadata', { originalname: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype });
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
     const sheetName = workbook.SheetNames[0];
+    console.log('importStudents sheetName', sheetName);
     const worksheet = workbook.Sheets[sheetName];
     const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    console.log('importStudents parsed rows', json.length);
 
     let total = json.length, imported = 0, skipped = 0;
     const errors = [];
@@ -178,6 +273,8 @@ exports.importStudents = async (req, res, next) => {
 
     for(let i=0;i<json.length;i++){
       const row = json[i];
+      const rowIndex = i + 2;
+      console.log('importStudents row start', { rowIndex, row });
       const name = (row['Name'] || row['name'] || '').toString().trim();
       const rollNo = (row['Roll No'] || row['rollNo'] || '').toString().trim();
       const admissionNo = (row['Admission No'] || row['admissionNo'] || '').toString().trim();
@@ -188,53 +285,93 @@ exports.importStudents = async (req, res, next) => {
       const parentName = (row['Parent Name'] || row['parentName'] || '').toString().trim();
       const parentPhone = (row['Parent Phone'] || row['parentPhone'] || '').toString().trim();
       const address = (row['Address'] || row['address'] || '').toString().trim();
-      let dateOfBirth;
-      if(dobValue) {
-        const parsed = new Date(dobValue);
-        dateOfBirth = Number.isNaN(parsed.getTime()) ? undefined : parsed;
-      }
+      const dateOfBirth = normalizeDobString(dobValue);
+      console.log('importStudents normalized row', { rowIndex, name, rollNo, admissionNo, dateOfBirth, dobValue });
 
       if(!name || !rollNo || !admissionNo){
-        skipped++; errors.push({ row: i+2, reason: 'Missing required fields (Name/Roll/Admission)' });
+        skipped++; errors.push({ row: rowIndex, reason: 'Missing required fields (Name/Roll/Admission)' });
+        console.log('importStudents skipped row missing required fields', { rowIndex });
+        continue;
+      }
+
+      if(!dateOfBirth){
+        skipped++; errors.push({ row: rowIndex, reason: 'Invalid or missing DOB. Expected DDMMYYYY string.' });
+        console.log('importStudents skipped row invalid dob', { rowIndex, dobValue });
         continue;
       }
 
       const exists = await Student.findOne({ $or: [{ rollNo }, { admissionNo }] });
-      if(exists){ skipped++; errors.push({ row: i+2, reason: 'Duplicate roll/admission' }); continue; }
+      if(exists){ skipped++; errors.push({ row: rowIndex, reason: 'Duplicate roll/admission' }); console.log('importStudents skipped row duplicate', { rowIndex, rollNo, admissionNo }); continue; }
 
-      const userResult = await createStudentUser({
-        name,
-        email: (row['Email'] || row['email'] || '').toString().trim(),
-        registrationNo: admissionNo,
-        dateOfBirth
-      });
+      const session = await Student.startSession();
+      let useTransaction = false;
+      let createdUserId = null;
+      try {
+        try {
+          session.startTransaction();
+          useTransaction = true;
+          console.log('importStudents row transaction started', { rowIndex });
+        } catch (_) {
+          console.log('importStudents row transaction unavailable', { rowIndex });
+        }
 
-      const st = {
-        user: userResult.user._id,
-        name,
-        rollNo,
-        admissionNo,
-        registrationNo: admissionNo,
-        className,
-        section,
-        gender: gender.toLowerCase(),
-        dateOfBirth,
-        parentName,
-        parentPhone,
-        address
-      };
+        const userResult = await createStudentUser({
+          name,
+          email: (row['Email'] || row['email'] || '').toString().trim(),
+          registrationNo: admissionNo,
+          dateOfBirth
+        }, session);
+        createdUserId = userResult.rawPassword ? userResult.user._id : null;
+        console.log('importStudents created/reused user', { rowIndex, userId: userResult.user._id, rawPassword: !!userResult.rawPassword });
 
-      try{
-        await Student.create(st);
+        const student = new Student({
+          user: userResult.user._id,
+          name,
+          rollNo,
+          admissionNo,
+          registrationNo: admissionNo,
+          className,
+          section,
+          gender: normalizeGender(gender),
+          dateOfBirth,
+          parentName,
+          parentPhone,
+          address
+        });
+        await student.save(session ? { session } : {});
+        console.log('importStudents created student', { rowIndex, studentId: student._id });
+
+        if(useTransaction) {
+          await session.commitTransaction();
+          console.log('importStudents row transaction committed', { rowIndex });
+        }
+
         if(userResult.rawPassword){
           createdUsers.push({ admissionNo, password: userResult.rawPassword });
         }
         imported++;
-      }catch(e){ skipped++; errors.push({ row: i+2, reason: e.message }); }
+      } catch(e) {
+        console.error('importStudents row error', { rowIndex, error: e.message, code: e.code });
+        if(useTransaction) {
+          await session.abortTransaction();
+          console.log('importStudents row transaction aborted', { rowIndex });
+        } else if(createdUserId) {
+          await User.findByIdAndDelete(createdUserId);
+          console.log('importStudents row cleanup deleted orphan user', { rowIndex, userId: createdUserId });
+        }
+        skipped++; errors.push({ row: rowIndex, reason: e.message });
+      } finally {
+        session.endSession();
+        console.log('importStudents row session ended', { rowIndex });
+      }
     }
 
-    return res.json({ total, imported, skipped, errors, createdUsers, note: 'Students created with registrationNo login. Password is DOB (YYYYMMDD) when DOB exists.' });
-  }catch(err){ next(err); }
+    console.log('importStudents completed', { total, imported, skipped, createdUsers: createdUsers.length, errors: errors.length });
+    return res.json({ total, imported, skipped, errors, createdUsers, note: 'Students created with registrationNo login. Password is DOB (DDMMYYYY) when DOB exists.' });
+  }catch(err){
+    console.error('importStudents fatal error', err);
+    next(err);
+  }
 };
 
 // Export all students as Excel
@@ -248,7 +385,7 @@ exports.exportStudents = async (req, res, next) => {
       Class: s.className,
       Section: s.section,
       Gender: s.gender,
-      'Date Of Birth': s.dateOfBirth ? s.dateOfBirth.toISOString().split('T')[0] : '',
+      'Date Of Birth': s.dateOfBirth || '',
       'Parent Name': s.parentName,
       'Parent Phone': s.parentPhone,
       Address: s.address

@@ -10,8 +10,13 @@ const studentSchema = new Schema({
   admissionNo: { type: String, required: true, unique: true },
   className: { type: String },
   section: { type: String },
-  gender: { type: String, enum: ['male', 'female', 'other'] },
-  dateOfBirth: { type: Date },
+  gender: { type: String, enum: ['male', 'female', 'other','M','F'] },
+  dateOfBirth: {
+    type: String,
+    required: true,
+    trim: true,
+    match: [/^\d{8}$/, 'dateOfBirth must be exactly 8 digits in DDMMYYYY format']
+  },
   parentName: { type: String },
   parentPhone: { type: String },
   address: { type: String },

@@ -4,6 +4,26 @@ const Teacher = require('../models/Teacher');
 const Class = require('../models/Class');
 const bcrypt = require('bcryptjs');
 
+const normalizeDobString = (value) => {
+  if (value === undefined || value === null) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const day = `${value.getDate()}`.padStart(2, '0');
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const year = value.getFullYear();
+    return `${day}${month}${year}`;
+  }
+  const raw = value.toString().trim();
+  if (!raw || !/^[0-9]+$/.test(raw)) return null;
+  const normalized = raw.padStart(8, '0');
+  if (!/^\d{8}$/.test(normalized)) return null;
+  const day = parseInt(normalized.slice(0, 2), 10);
+  const month = parseInt(normalized.slice(2, 4), 10);
+  const year = parseInt(normalized.slice(4), 10);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return normalized;
+};
+
 // === CLASS MANAGEMENT ===
 exports.createClass = async (req, res) => {
   try{
@@ -42,12 +62,16 @@ exports.createStudent = async (req, res) => {
       return res.status(400).json({ message: 'Name, class, roll number and date of birth are required.' });
     }
 
+    const dobString = normalizeDobString(dateOfBirth);
+    if(!dobString) {
+      return res.status(400).json({ message: 'Invalid dateOfBirth format. Expected 8 digits DDMMYYYY.' });
+    }
+
     const normalizedEmail = email ? email.toString().trim().toLowerCase() : undefined;
     const classDoc = await Class.findById(classId);
     const classLabel = classDoc ? `${classDoc.name}` : 'STU';
     const registrationNo = admissionNo ? admissionNo : `${classLabel}-${rollNo}`.replace(/\s+/g, '').toUpperCase();
-    const dobStr = dateOfBirth ? String(dateOfBirth).split('T')[0] : '';
-    const password = dobStr.replace(/-/g, '');
+    const password = dobString;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userData = {
@@ -114,7 +138,16 @@ exports.listStudents = async (req, res) => {
 
 exports.updateStudent = async (req, res) => {
   try{
-    const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    const data = req.body;
+    if (data.dateOfBirth !== undefined) {
+      const dobString = normalizeDobString(data.dateOfBirth);
+      if (!dobString) {
+        return res.status(400).json({ message: 'Invalid dateOfBirth format. Expected 8 digits DDMMYYYY.' });
+      }
+      data.dateOfBirth = dobString;
+    }
+
+    const student = await Student.findByIdAndUpdate(req.params.id, data, { new: true })
       .populate('user', 'name email')
       .populate('class', 'name');
     res.json(student);
